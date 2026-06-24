@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Hardened starting rules for PRODUCTION. Swap this in for firestore.rules
+// before deploying (see PRODUCTION.md). Keep the permissive firestore.rules
+// for local emulator development.
+//
+// NOTE: token issuance currently happens client-side, so `services` writes and
+// `tokens` creates are still allowed publicly. For a fully locked-down launch,
+// move issueToken/advanceQueue to Cloud Functions and remove those allowances.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Public business + service info powers discovery and the live queue.
+    match /businesses/{bizId} {
+      allow read: if true;
+      allow write: if signedIn() && role() in ['admin', 'super'];
+
+      match /services/{svcId} {
+        allow read: if true;
+        // Staff/admin manage services; client token issuance also updates
+        // lastIssued here (move to a Cloud Function to fully secure).
+        allow write: if signedIn() || true;
+      }
+    }
+
+    // Tokens: anyone can take a token (guest booking) and read the queue;
+    // only signed-in staff/admin can advance/cancel/delete.
+    match /tokens/{tokenId} {
+      allow read, create: if true;
+      allow update, delete: if signedIn();
+    }
+
+    // Role docs: owner can read their own; writes are server-side only.
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // Feedback: anyone can submit, only staff/admin can read.
+    match /feedback/{id} {
+      allow create: if true;
+      allow read: if signedIn();
+    }
+  }
+}

@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// Production rules. Public can read business/service info and take tokens
+// (guest booking); staff/admin writes require auth. NOTE: token issuance is
+// still client-side, so `services` writes and `tokens` creates stay public —
+// move issueToken/advanceQueue to Cloud Functions to fully lock this down.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function role() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    match /businesses/{bizId} {
+      allow read: if true;
+      allow write: if signedIn() && role() in ['admin', 'super'];
+
+      match /services/{svcId} {
+        allow read: if true;
+        // Token issuance/advance now happens in Cloud Functions (admin SDK, bypasses rules).
+        // Clients can only write services if they're admin/super (managing them).
+        allow write: if signedIn() && role() in ['admin', 'super'];
+      }
+
+      match /branches/{branchId} {
+        allow read: if true;
+        allow write: if signedIn() && role() in ['admin', 'super'];
+      }
+    }
+
+    // Collection-group read so the customer app & TV board can query every
+    // service at once via collectionGroup('services').
+    match /{path=**}/services/{svcId} {
+      allow read: if true;
+    }
+
+    // Tokens are read-only to clients. ALL writes go through Cloud Functions
+    // (issueToken / advanceQueue / cancelToken) so the queue can't be tampered with.
+    match /tokens/{tokenId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /feedback/{id} {
+      allow create: if true;
+      allow read: if signedIn();
+    }
+  }
+}

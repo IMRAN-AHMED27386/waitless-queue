@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
+/* ── Waitless design tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --acc: #4361ee;
+  --acc-dark: #3050de;
+  --al: #eef1ff;
+  --lv: #06d6a0;
+  --lvb: rgba(6, 214, 160, 0.12);
+  --wn: #f77f00;
+  --wnb: rgba(247, 127, 0, 0.12);
+  --dng: #ef233c;
+  --dngb: rgba(239, 35, 60, 0.12);
+  --pur: #7209b7;
+  --purb: rgba(114, 9, 183, 0.1);
+  --sbg: #0d1b3e;
+  --t1: #0d1b3e;
+  --t2: #4a5578;
+  --t3: #94a3b8;
+  --bd: #dde3f4;
+  --sf: #ffffff;
+  --s2: #f8faff;
+  --bg: #eef2ff;
+  --sh: 0 2px 8px rgba(13, 27, 62, 0.06), 0 1px 2px rgba(13, 27, 62, 0.04);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-acc: var(--acc);
+  --color-acc-dark: var(--acc-dark);
+  --color-live: var(--lv);
+  --color-warn: var(--wn);
+  --color-danger: var(--dng);
+  --color-purple: var(--pur);
+  --color-ink: var(--t1);
+  --color-ink-2: var(--t2);
+  --color-ink-3: var(--t3);
+  --color-border: var(--bd);
+  --color-surface: var(--sf);
+  --color-surface-2: var(--s2);
+  --color-page: var(--bg);
+  --font-display: var(--font-syne);
+  --font-sans: var(--font-dm-sans);
+  --font-num: var(--font-space);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-syne), system-ui, sans-serif;
+}
+
+/* Clean, legible numeric font for stat cards, tokens, metrics */
+.num {
+  font-family: var(--font-space), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }

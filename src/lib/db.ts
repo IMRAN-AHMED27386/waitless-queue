@@ -1,0 +1,143 @@
+import { db, functions } from "./firebase";
+import {
+  collection, collectionGroup, doc, onSnapshot, query, where, orderBy,
+  updateDoc, addDoc, serverTimestamp,
+} from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+
+export type Biz = {
+  id: string; name: string; category: string; categoryIcon: string;
+  logo: string; location: string; distanceKm: number; likes: number;
+};
+export type Svc = {
+  id: string; businessId: string; name: string; icon: string; prefix: string;
+  currentServing: number; lastIssued: number; avgMins: number;
+};
+export type Tok = {
+  id: string; businessId: string; serviceId: string; prefix: string;
+  numericValue: number; number: string; customerName: string; phone: string;
+  priority: string; status: string; servedBy?: string | null;
+};
+
+export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
+
+export function listenBusinesses(cb: (b: Biz[]) => void) {
+  return onSnapshot(collection(db, "businesses"), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Biz))
+  );
+}
+
+export function listenAllServices(cb: (s: Svc[]) => void) {
+  return onSnapshot(collectionGroup(db, "services"), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, businessId: d.ref.parent.parent!.id, ...d.data() }) as Svc))
+  );
+}
+
+export function listenService(businessId: string, serviceId: string, cb: (s: Svc | null) => void) {
+  return onSnapshot(doc(db, `businesses/${businessId}/services/${serviceId}`), (d) =>
+    cb(d.exists() ? ({ id: d.id, businessId, ...d.data() } as Svc) : null)
+  );
+}
+
+export function listenToken(id: string, cb: (t: Tok | null) => void) {
+  return onSnapshot(doc(db, "tokens", id), (d) =>
+    cb(d.exists() ? ({ id: d.id, ...d.data() } as Tok) : null)
+  );
+}
+
+export type Branch = {
+  id: string; name: string; location: string; status: string;
+  inQueue: number; counters: number; avgWait: string;
+};
+
+export function listenBranches(businessId: string, cb: (b: Branch[]) => void) {
+  return onSnapshot(collection(db, `businesses/${businessId}/branches`), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Branch))
+  );
+}
+
+export function addBranch(businessId: string, data: Omit<Branch, "id">) {
+  return addDoc(collection(db, `businesses/${businessId}/branches`), data);
+}
+
+export function updateBranch(businessId: string, branchId: string, data: Partial<Branch>) {
+  return updateDoc(doc(db, `businesses/${businessId}/branches/${branchId}`), data);
+}
+
+export function addService(businessId: string, data: { name: string; icon: string; prefix: string; avgMins: number }) {
+  return addDoc(collection(db, `businesses/${businessId}/services`), { ...data, currentServing: 0, lastIssued: 0 });
+}
+
+export function updateService(businessId: string, serviceId: string, data: Partial<Svc>) {
+  return updateDoc(doc(db, `businesses/${businessId}/services/${serviceId}`), data);
+}
+
+export function addBusiness(data: Record<string, unknown>) {
+  return addDoc(collection(db, "businesses"), data);
+}
+
+export function updateBusiness(businessId: string, data: Record<string, unknown>) {
+  return updateDoc(doc(db, "businesses", businessId), data);
+}
+
+export function listenQueue(businessId: string, serviceId: string, cb: (t: Tok[]) => void) {
+  const q = query(
+    collection(db, "tokens"),
+    where("businessId", "==", businessId),
+    where("serviceId", "==", serviceId),
+    where("status", "==", "waiting"),
+    orderBy("numericValue")
+  );
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tok)));
+}
+
+/** Token issuance runs server-side (Cloud Function) so the number can't be faked. */
+export async function issueToken(
+  businessId: string, serviceId: string,
+  info: { name: string; phone: string; priority: string }
+) {
+  const fn = httpsCallable(functions, "issueToken");
+  const res = await fn({ businessId, serviceId, name: info.name, phone: info.phone, priority: info.priority });
+  return res.data as { id: string; number: string; numericValue: number };
+}
+
+/** Queue advancement runs server-side (Cloud Function); requires staff auth. */
+export async function advanceQueue(businessId: string, serviceId: string, servedBy?: string) {
+  const fn = httpsCallable(functions, "advanceQueue");
+  const res = await fn({ businessId, serviceId, servedBy: servedBy ?? null });
+  return (res.data as { num: number | null }).num;
+}
+
+export function cancelToken(id: string) {
+  return httpsCallable(functions, "cancelToken")({ tokenId: id });
+}
+
+export function registerPush(data: { tokenId: string; fcmToken: string }) {
+  return httpsCallable(functions, "registerPush")(data);
+}
+
+export function saveFeedback(data: { businessId: string; serviceId: string; tokenId?: string; rating: number; label: string }) {
+  return addDoc(collection(db, "feedback"), { ...data, createdAt: serverTimestamp() });
+}
+
+export type HistTok = Tok & { createdAt: Date | null };
+
+export function listenBusinessTokens(businessId: string, cb: (t: HistTok[]) => void) {
+  return onSnapshot(
+    query(collection(db, "tokens"), where("businessId", "==", businessId)),
+    (snap) => cb(snap.docs.map((d) => {
+      const x = d.data() as Record<string, unknown> & { createdAt?: { toDate?: () => Date } };
+      return { id: d.id, ...(x as object), createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : null } as HistTok;
+    }))
+  );
+}
+
+export function listenBusiness(id: string, cb: (b: (Biz & { featureToggles?: Record<string, boolean> }) | null) => void) {
+  return onSnapshot(doc(db, "businesses", id), (d) =>
+    cb(d.exists() ? ({ id: d.id, ...d.data() } as Biz & { featureToggles?: Record<string, boolean> }) : null)
+  );
+}
+
+export function setFeatureToggle(businessId: string, key: string, value: boolean) {
+  return updateDoc(doc(db, "businesses", businessId), { [`featureToggles.${key}`]: value });
+}
