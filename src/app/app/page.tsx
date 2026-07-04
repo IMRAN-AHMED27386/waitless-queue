@@ -54,7 +54,6 @@ export default function CustomerApp() {
   ), [merged, cat, query]);
 
   const biz = merged.find((b) => b.id === bizId) ?? null;
-  const liveSvc = svcList.find((s) => s.businessId === bizId && s.id === svcId) ?? null;
   const svc = biz?.services.find((s) => s.id === svcId) ?? null;
   const stepIndex = STEP_ORDER.indexOf(step);
 
@@ -98,8 +97,8 @@ export default function CustomerApp() {
         {step === "details" && biz && svc && (
           <Details biz={biz} svc={svc} name={name} setName={setName} phone={phone} setPhone={setPhone} priority={priority} setPriority={setPriority} onSubmit={generate} />
         )}
-        {step === "token" && biz && svc && liveSvc && issued && (
-          <TokenView biz={biz} svc={svc} liveSvc={liveSvc} issued={issued} onCancel={doCancel} onDone={() => setStep("feedback")} />
+        {step === "token" && biz && issued && (
+          <TokenView biz={biz} issued={issued} onCancel={doCancel} onDone={() => setStep("feedback")} />
         )}
         {step === "feedback" && <Feedback rating={rating} onDone={reset} onRate={(i, label) => {
           setRating(i);
@@ -215,8 +214,8 @@ function Details({ biz, svc, name, setName, phone, setPhone, priority, setPriori
   );
 }
 
-function TokenView({ biz, svc, liveSvc, issued, onCancel, onDone }: {
-  biz: MergedBiz; svc: Svc; liveSvc: Svc; issued: Issued; onCancel: () => void; onDone: () => void;
+function TokenView({ biz, issued, onCancel, onDone }: {
+  biz: MergedBiz; issued: Issued; onCancel: () => void; onDone: () => void;
 }) {
   const [tok, setTok] = useState<Tok | null>(null);
   const notifiedSoon = useRef(false);
@@ -224,38 +223,70 @@ function TokenView({ biz, svc, liveSvc, issued, onCancel, onDone }: {
   useEffect(() => listenToken(issued.id, setTok), [issued.id]);
   useEffect(() => { setupPush(issued.id); }, [issued.id]);
 
-  const serving = liveSvc.currentServing;
+  // The token doc is the source of truth — a staff transfer moves it to a new
+  // service and number, and this page follows along live.
+  const curSvcId = tok?.serviceId ?? issued.serviceId;
+  const number = tok?.number ?? issued.number;
+  const numeric = tok?.numericValue ?? issued.numericValue;
+  const journey = tok?.journey ?? [];
+  const svc = biz.services.find((s) => s.id === curSvcId);
+
+  // New stage → let the local notifications fire again for the new queue.
+  useEffect(() => { notifiedSoon.current = false; notifiedTurn.current = false; }, [curSvcId]);
+
+  const serving = svc?.currentServing ?? 0;
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
-    const away = issued.numericValue - serving;
+    const away = numeric - serving;
     if (away <= 0 && !notifiedTurn.current) {
       notifiedTurn.current = true;
-      new Notification("It's your turn! 🎉", { body: `${issued.number} — please proceed to the counter.` });
+      new Notification("It's your turn! 🎉", { body: `${number} — please proceed to the counter.` });
     } else if (away > 0 && away <= 2 && !notifiedSoon.current) {
       notifiedSoon.current = true;
-      new Notification("Almost your turn ⏰", { body: `${issued.number} — you're ${away} away.` });
+      new Notification("Almost your turn ⏰", { body: `${number} — you're ${away} away.` });
     }
-  }, [serving, issued.numericValue, issued.number]);
-  const ahead = Math.max(0, issued.numericValue - serving - 1);
+  }, [serving, numeric, number]);
+
+  if (!svc) return <div className="text-center text-sm text-ink-3 py-10">Loading your queue…</div>;
+
+  const ahead = Math.max(0, numeric - serving - 1);
   const estWait = ahead * svc.avgMins;
-  const yourTurn = serving >= issued.numericValue || tok?.status === "served";
+  const yourTurn = serving >= numeric || tok?.status === "served";
   const cancelled = tok?.status === "cancelled";
-  const total = Math.max(issued.numericValue, liveSvc.lastIssued);
-  const pct = Math.min(100, Math.round((serving / issued.numericValue) * 100));
+  const total = Math.max(numeric, svc.lastIssued);
+  const pct = Math.min(100, Math.round((serving / numeric) * 100));
 
   const rows = [
     { num: `${svc.prefix}-${serving}`, label: "Serving", kind: "serving" as const },
     ...Array.from({ length: Math.min(ahead, 3) }, (_, i) => ({
       num: `${svc.prefix}-${serving + i + 1}`, label: `${(i + 1) * svc.avgMins} min`, kind: "wait" as const,
     })),
-    { num: issued.number, label: "You!", kind: "mine" as const },
+    { num: number, label: "You!", kind: "mine" as const },
   ];
 
   return (
     <div>
+      {journey.length > 0 && (
+        <div className="flex flex-col gap-1.5 mb-3">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Your visit · stage {journey.length + 1}</div>
+          {journey.map((st, i) => (
+            <div key={i} className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-border bg-surface">
+              <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] font-bold text-white shrink-0" style={{ background: "#06D6A0" }}>✓</span>
+              <span className="text-[13px] font-semibold text-ink-2 flex-1 truncate">{st.serviceName}</span>
+              <span className="num text-xs text-ink-3">{st.number}</span>
+            </div>
+          ))}
+          <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl" style={{ background: "var(--al)", border: "1px solid var(--acc)" }}>
+            <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] font-bold text-white bg-acc shrink-0">{journey.length + 1}</span>
+            <span className="text-[13px] font-semibold flex-1 truncate" style={{ color: "var(--acc)" }}>{svc.name} — current</span>
+            <span className="num text-xs font-semibold" style={{ color: "var(--acc)" }}>{number}</span>
+          </div>
+        </div>
+      )}
+
       <div className="relative overflow-hidden rounded-[18px] p-5 text-white" style={{ background: "linear-gradient(135deg,#0D1B3E 0%,#1A2F70 100%)" }}>
         <div className="text-[12.5px]" style={{ color: "rgba(255,255,255,.55)" }}>{svc.name} · {biz.name}</div>
-        <div className="num font-bold text-[56px] leading-none tracking-tight mt-1">{issued.number}</div>
+        <div className="num font-bold text-[56px] leading-none tracking-tight mt-1">{number}</div>
         <span className="inline-block mt-2 text-[11.5px] font-semibold px-2.5 py-1 rounded-full"
           style={yourTurn ? { background: "rgba(6,214,160,.16)", color: "#06D6A0" } : { background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)" }}>
           {cancelled ? "● Cancelled" : yourTurn ? "● Your turn — proceed!" : "● Waiting"}

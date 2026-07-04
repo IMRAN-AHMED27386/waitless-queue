@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, type Tok, type Svc, type Biz } from "@/lib/db";
+import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, type Tok, type Svc, type Biz } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
+import Modal, { Field, inputCls } from "@/components/Modal";
 
 const filters = ["All", "Waiting", "Priority"];
 const selCls = "text-[13px] font-semibold px-3 py-2 rounded-[10px] border border-border bg-surface text-ink outline-none focus:border-acc max-w-[44vw] truncate";
@@ -25,6 +26,8 @@ export default function Staff() {
   const [query, setQuery] = useState("");
   const [pName, setPName] = useState("");
   const [pPriority, setPPriority] = useState("vip");
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferTo, setTransferTo] = useState("");
 
   useEffect(() => {
     const u1 = listenBusinesses(setBusinesses);
@@ -63,6 +66,27 @@ export default function Staff() {
     if (kind === "noshow" || kind === "skip") setSkipped((n) => n + 1);
     const tag = kind === "noshow" ? "No-show · " : kind === "skip" ? "Skipped · " : "";
     flash(`${tag}Now serving ${svc?.prefix}-${num}`);
+  }
+
+  function openTransfer() {
+    if (!svc?.currentServing) { flash("No customer is being served yet — call next first."); return; }
+    const others = bizServices.filter((s) => s.id !== svcId);
+    if (!others.length) { flash("No other service to transfer to."); return; }
+    setTransferTo(others[0].id);
+    setShowTransfer(true);
+  }
+
+  async function doTransfer() {
+    if (!transferTo || busy) return;
+    setBusy(true);
+    try {
+      const r = await transferToken(bizId, svcId, transferTo);
+      setShowTransfer(false);
+      flash(`Sent ${serving} → ${r.toName} as ${r.number}`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Transfer failed.");
+    }
+    setBusy(false);
   }
 
   async function addPriority() {
@@ -154,7 +178,7 @@ export default function Staff() {
             <ActionBtn label="Call Next" icon="⏭️" primary onClick={() => advance("next")} />
             <ActionBtn label="Recall" icon="🔁" onClick={() => flash(`Recalling ${serving} — please proceed`)} />
             <ActionBtn label="Skip" icon="⏩" onClick={() => advance("skip")} />
-            <ActionBtn label="Transfer" icon="↗️" onClick={() => flash("Transfer to another counter — coming soon")} />
+            <ActionBtn label="Transfer" icon="↗️" onClick={openTransfer} />
             <ActionBtn label="No Show" icon="❌" danger onClick={() => advance("noshow")} />
             <ActionBtn label="Complete" icon="✅" onClick={() => advance("complete")} />
           </div>
@@ -181,6 +205,22 @@ export default function Staff() {
           </div>
         </div>
       </div>
+
+      {showTransfer && (
+        <Modal title={`Transfer ${serving} to next stage`} onClose={() => setShowTransfer(false)}>
+          <p className="text-sm text-ink-3 mb-3">The customer keeps the same live token page — they get a new number in the next queue and a notification telling them where to go.</p>
+          <Field label="Send customer to">
+            <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className={inputCls}>
+              {bizServices.filter((s) => s.id !== svcId).map((s) => (
+                <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+              ))}
+            </select>
+          </Field>
+          <button onClick={doTransfer} disabled={busy || !transferTo} className="w-full py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition">
+            {busy ? "Transferring…" : "Transfer customer ↗"}
+          </button>
+        </Modal>
+      )}
 
       {toast && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-4 py-2.5 rounded-xl text-white text-sm font-semibold z-50 shadow-lg" style={{ background: "#0D1B3E" }}>{toast}</div>

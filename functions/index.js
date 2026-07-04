@@ -1,6 +1,7 @@
 // Waitless Cloud Functions — server-side queue logic so the browser can't tamper.
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
+const { FieldValue } = require("firebase-admin/firestore");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -23,7 +24,7 @@ exports.issueToken = onCall(opts, async (req) => {
     tx.set(tokenRef, {
       businessId, serviceId, prefix: s.prefix, numericValue: next, number,
       customerName: name || "Guest", phone: phone || "", priority: priority || "regular",
-      status: "waiting", createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      status: "waiting", createdAt: FieldValue.serverTimestamp(),
     });
     out = { id: tokenRef.id, number, numericValue: next };
   });
@@ -44,7 +45,7 @@ exports.advanceQueue = onCall(opts, async (req) => {
   const d = qs.docs[0];
   const num = d.data().numericValue;
   const batch = db.batch();
-  batch.update(d.ref, { status: "served", servedBy: servedBy || null, completedAt: admin.firestore.FieldValue.serverTimestamp() });
+  batch.update(d.ref, { status: "served", servedBy: servedBy || null, completedAt: FieldValue.serverTimestamp() });
   batch.update(db.doc(`businesses/${businessId}/services/${serviceId}`), { currentServing: num });
   await batch.commit();
   await notifyQueue(businessId, serviceId, num);
@@ -75,6 +76,66 @@ async function notifyQueue(businessId, serviceId, C) {
     }
   }
 }
+
+// Staff sends the customer being served into another service's queue.
+// The SAME token doc moves stages, so the customer's live token page follows along.
+exports.transferToken = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
+  const { businessId, fromServiceId, toServiceId } = req.data || {};
+  if (!businessId || !fromServiceId || !toServiceId || fromServiceId === toServiceId)
+    throw new HttpsError("invalid-argument", "Missing or invalid service ids.");
+
+  const fromRef = db.doc(`businesses/${businessId}/services/${fromServiceId}`);
+  const toRef = db.doc(`businesses/${businessId}/services/${toServiceId}`);
+  const fromSnap = await fromRef.get();
+  if (!fromSnap.exists) throw new HttpsError("not-found", "Service not found.");
+  const cur = fromSnap.data().currentServing || 0;
+  if (!cur) throw new HttpsError("failed-precondition", "No customer is being served yet.");
+
+  // The customer at the counter = the token holding the number currently being served.
+  const qs = await db.collection("tokens")
+    .where("businessId", "==", businessId)
+    .where("serviceId", "==", fromServiceId)
+    .where("numericValue", "==", cur)
+    .limit(1).get();
+  if (qs.empty) throw new HttpsError("not-found", "Current customer's token not found.");
+  const tokRef = qs.docs[0].ref;
+
+  let out = null;
+  await db.runTransaction(async (tx) => {
+    const [toSnap, tokSnap] = await Promise.all([tx.get(toRef), tx.get(tokRef)]);
+    if (!toSnap.exists) throw new HttpsError("not-found", "Target service not found.");
+    const s = toSnap.data();
+    const t = tokSnap.data();
+    const next = (s.lastIssued || 0) + 1;
+    const number = `${s.prefix}-${next}`;
+    tx.update(toRef, { lastIssued: next });
+    tx.update(tokRef, {
+      serviceId: toServiceId, prefix: s.prefix, numericValue: next, number,
+      status: "waiting", servedBy: null,
+      journey: FieldValue.arrayUnion({
+        serviceId: fromServiceId, serviceName: fromSnap.data().name || "",
+        number: t.number, servedBy: t.servedBy || null, at: Date.now(),
+      }),
+    });
+    out = { id: tokRef.id, number, numericValue: next, position: Math.max(1, next - (s.currentServing || 0)), toName: s.name || "" };
+  });
+
+  // Tell the customer where to go next.
+  const tokData = (await tokRef.get()).data();
+  if (tokData.fcmToken) {
+    try {
+      await admin.messaging().send({
+        token: tokData.fcmToken,
+        notification: {
+          title: `Next step: ${out.toName} ➡️`,
+          body: `Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}`,
+        },
+      });
+    } catch (e) { /* stale token, ignore */ }
+  }
+  return out;
+});
 
 // Customer cancels their own token.
 exports.cancelToken = onCall(opts, async (req) => {

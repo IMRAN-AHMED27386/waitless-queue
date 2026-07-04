@@ -13,10 +13,15 @@ export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;
 };
+export type JourneyStage = {
+  serviceId: string; serviceName: string; number: string;
+  servedBy?: string | null; at?: number;
+};
 export type Tok = {
   id: string; businessId: string; serviceId: string; prefix: string;
   numericValue: number; number: string; customerName: string; phone: string;
   priority: string; status: string; servedBy?: string | null;
+  journey?: JourneyStage[];
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
@@ -106,6 +111,13 @@ export async function advanceQueue(businessId: string, serviceId: string, served
   const fn = httpsCallable(functions, "advanceQueue");
   const res = await fn({ businessId, serviceId, servedBy: servedBy ?? null });
   return (res.data as { num: number | null }).num;
+}
+
+/** Staff moves the customer being served into another service's queue (multi-stage journey). */
+export async function transferToken(businessId: string, fromServiceId: string, toServiceId: string) {
+  const fn = httpsCallable(functions, "transferToken");
+  const res = await fn({ businessId, fromServiceId, toServiceId });
+  return res.data as { id: string; number: string; numericValue: number; position: number; toName: string };
 }
 
 export function cancelToken(id: string) {
