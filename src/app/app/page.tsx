@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
-  waitingOf, type Biz, type Svc, type Tok,
+  waitingOf, paceOf, hasLivePace, type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush } from "@/lib/messaging";
 
@@ -173,7 +173,7 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
             <div className="flex-1">
               <div className="font-display font-bold text-ink">{s.name}</div>
               <div className="text-xs text-ink-3 mt-0.5">
-                {s.waiting === 0 ? "No wait — walk right in" : `👥 ${s.waiting} waiting · ~${s.waiting * s.avgMins + (s.delayMins ?? 0)} min`}
+                {s.waiting === 0 ? "No wait — walk right in" : `👥 ${s.waiting} waiting · ~${Math.round(s.waiting * paceOf(s) + (s.delayMins ?? 0))} min`}
                 {(s.delayMins ?? 0) > 0 && <span className="font-semibold" style={{ color: "var(--wn)" }}> · ⏳ {s.delayMins} min delay</span>}
               </div>
             </div>
@@ -256,7 +256,9 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   const yourTurn = serving >= numeric || tok?.status === "served";
   const cancelled = tok?.status === "cancelled";
   const delay = yourTurn || cancelled ? 0 : svc.delayMins ?? 0;
-  const estWait = ahead * svc.avgMins + delay;
+  const pace = paceOf(svc);
+  const livePace = hasLivePace(svc);
+  const estWait = Math.round(ahead * pace + delay);
   const delayTime = svc.delayAt?.toDate?.().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const total = Math.max(numeric, svc.lastIssued);
   const pct = Math.min(100, Math.round((serving / numeric) * 100));
@@ -264,7 +266,7 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   const rows = [
     { num: `${svc.prefix}-${serving}`, label: "Serving", kind: "serving" as const },
     ...Array.from({ length: Math.min(ahead, 3) }, (_, i) => ({
-      num: `${svc.prefix}-${serving + i + 1}`, label: `${(i + 1) * svc.avgMins} min`, kind: "wait" as const,
+      num: `${svc.prefix}-${serving + i + 1}`, label: `${Math.round((i + 1) * pace)} min`, kind: "wait" as const,
     })),
     { num: number, label: "You!", kind: "mine" as const },
   ];
@@ -309,7 +311,7 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         <div className="grid grid-cols-3 gap-2 mt-5">
           {[
             { l: "Ahead", v: ahead, u: "people" },
-            { l: "Est. wait", v: estWait, u: "minutes" },
+            { l: "Est. wait", v: estWait, u: livePace ? "min · live pace" : "minutes" },
             { l: "Serving", v: `${svc.prefix}-${serving}`, u: "now" },
           ].map((m) => (
             <div key={m.l}>

@@ -1,7 +1,7 @@
 // Waitless Cloud Functions — server-side queue logic so the browser can't tamper.
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const admin = require("firebase-admin");
-const { FieldValue } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -44,9 +44,31 @@ exports.advanceQueue = onCall(opts, async (req) => {
   if (qs.empty) return { num: null };
   const d = qs.docs[0];
   const num = d.data().numericValue;
+
+  // Honest ETA: measure the real gap since the previous "call next" and keep a
+  // rolling window of the last 10. Gaps under 30s (demo-clicking) or over 90min
+  // (lunch break / closed) would poison the average, so they're skipped.
+  const svcRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
+  const svcSnap = await svcRef.get();
+  const s = svcSnap.exists ? svcSnap.data() : {};
+  const nowMs = Date.now();
+  let gaps = Array.isArray(s.recentGaps) ? s.recentGaps.slice() : [];
+  if (s.lastAdvanceAt && typeof s.lastAdvanceAt.toMillis === "function") {
+    const gap = (nowMs - s.lastAdvanceAt.toMillis()) / 60000;
+    if (gap >= 0.5 && gap <= 90) gaps = [...gaps, Math.round(gap * 10) / 10].slice(-10);
+  }
+  const pace = gaps.length >= 3
+    ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) * 10) / 10
+    : null;
+
   const batch = db.batch();
   batch.update(d.ref, { status: "served", servedBy: servedBy || null, completedAt: FieldValue.serverTimestamp() });
-  batch.update(db.doc(`businesses/${businessId}/services/${serviceId}`), { currentServing: num });
+  batch.update(svcRef, {
+    currentServing: num,
+    lastAdvanceAt: Timestamp.fromMillis(nowMs),
+    recentGaps: gaps,
+    ...(pace != null ? { paceMins: pace } : {}),
+  });
   await batch.commit();
   await notifyQueue(businessId, serviceId, num);
   return { num };
@@ -158,11 +180,12 @@ exports.setDelay = onCall(opts, async (req) => {
     .get();
   let notified = 0;
   const title = delayMins > 0 ? `Running ~${delayMins} min behind ⏳` : "Back on schedule ✅";
+  const paceMins = s.paceMins > 0 ? s.paceMins : (s.avgMins || 5);
   for (const d of qs.docs) {
     const t = d.data();
     if (!t.fcmToken) continue;
     const ahead = Math.max(0, t.numericValue - (s.currentServing || 0) - 1);
-    const eta = ahead * (s.avgMins || 5) + delayMins;
+    const eta = Math.round(ahead * paceMins + delayMins);
     try {
       await admin.messaging().send({
         token: t.fcmToken,

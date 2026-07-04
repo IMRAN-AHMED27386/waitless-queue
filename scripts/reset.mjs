@@ -2,7 +2,7 @@
 // Emulator:  npm run reset
 // Cloud:     GOOGLE_APPLICATION_CREDENTIALS=... SEED_TARGET=cloud SEED_PROJECT=waitless-online node scripts/reset.mjs
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 const CLOUD = process.env.SEED_TARGET === "cloud";
 if (!CLOUD) process.env.FIRESTORE_EMULATOR_HOST = process.env.FIRESTORE_EMULATOR_HOST || "localhost:8080";
@@ -16,7 +16,11 @@ await b.commit();
 
 const svcs = await db.collectionGroup("services").get();
 let b2 = db.batch();
-for (const d of svcs.docs) b2.update(d.ref, { currentServing: 0, lastIssued: 0 });
+for (const d of svcs.docs) b2.update(d.ref, {
+  currentServing: 0, lastIssued: 0,
+  paceMins: FieldValue.delete(), recentGaps: FieldValue.delete(),
+  lastAdvanceAt: FieldValue.delete(), delayMins: FieldValue.delete(), delayAt: FieldValue.delete(),
+});
 await b2.commit();
 
 console.log(`✓ Cleared ${toks.size} tokens, reset ${svcs.size} services to fresh (start at #1)`);

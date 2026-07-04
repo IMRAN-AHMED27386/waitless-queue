@@ -13,6 +13,7 @@ export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;
   delayMins?: number; delayAt?: { toDate: () => Date } | null;
+  paceMins?: number;
 };
 export type JourneyStage = {
   serviceId: string; serviceName: string; number: string;
@@ -26,6 +27,11 @@ export type Tok = {
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
+
+/** Minutes per customer: the live measured pace when we have one, else the configured average. */
+export const paceOf = (s: Svc) => (s.paceMins && s.paceMins > 0 ? s.paceMins : s.avgMins);
+/** True when the estimate comes from real measured serving speed. */
+export const hasLivePace = (s: Svc) => !!(s.paceMins && s.paceMins > 0);
 
 export function listenBusinesses(cb: (b: Biz[]) => void) {
   return onSnapshot(collection(db, "businesses"), (snap) =>
