@@ -12,6 +12,7 @@ export type Biz = {
 export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;
+  delayMins?: number; delayAt?: { toDate: () => Date } | null;
 };
 export type JourneyStage = {
   serviceId: string; serviceName: string; number: string;
@@ -111,6 +112,13 @@ export async function advanceQueue(businessId: string, serviceId: string, served
   const fn = httpsCallable(functions, "advanceQueue");
   const res = await fn({ businessId, serviceId, servedBy: servedBy ?? null });
   return (res.data as { num: number | null }).num;
+}
+
+/** Staff announces (or clears, with 0) a delay — pushes new ETAs to everyone waiting. */
+export async function setDelay(businessId: string, serviceId: string, delayMins: number) {
+  const fn = httpsCallable(functions, "setDelay");
+  const res = await fn({ businessId, serviceId, delayMins });
+  return res.data as { ok: boolean; notified: number; waiting: number };
 }
 
 /** Staff moves the customer being served into another service's queue (multi-stage journey). */

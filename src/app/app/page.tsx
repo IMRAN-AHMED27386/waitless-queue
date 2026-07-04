@@ -172,7 +172,10 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
             <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 bg-surface-2">{s.icon}</span>
             <div className="flex-1">
               <div className="font-display font-bold text-ink">{s.name}</div>
-              <div className="text-xs text-ink-3 mt-0.5">{s.waiting === 0 ? "No wait — walk right in" : `👥 ${s.waiting} waiting · ~${s.waiting * s.avgMins} min`}</div>
+              <div className="text-xs text-ink-3 mt-0.5">
+                {s.waiting === 0 ? "No wait — walk right in" : `👥 ${s.waiting} waiting · ~${s.waiting * s.avgMins + (s.delayMins ?? 0)} min`}
+                {(s.delayMins ?? 0) > 0 && <span className="font-semibold" style={{ color: "var(--wn)" }}> · ⏳ {s.delayMins} min delay</span>}
+              </div>
             </div>
             <span className="text-ink-3">›</span>
           </button>
@@ -250,9 +253,11 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   if (!svc) return <div className="text-center text-sm text-ink-3 py-10">Loading your queue…</div>;
 
   const ahead = Math.max(0, numeric - serving - 1);
-  const estWait = ahead * svc.avgMins;
   const yourTurn = serving >= numeric || tok?.status === "served";
   const cancelled = tok?.status === "cancelled";
+  const delay = yourTurn || cancelled ? 0 : svc.delayMins ?? 0;
+  const estWait = ahead * svc.avgMins + delay;
+  const delayTime = svc.delayAt?.toDate?.().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const total = Math.max(numeric, svc.lastIssued);
   const pct = Math.min(100, Math.round((serving / numeric) * 100));
 
@@ -280,6 +285,16 @@ function TokenView({ biz, issued, onCancel, onDone }: {
             <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] font-bold text-white bg-acc shrink-0">{journey.length + 1}</span>
             <span className="text-[13px] font-semibold flex-1 truncate" style={{ color: "var(--acc)" }}>{svc.name} — current</span>
             <span className="num text-xs font-semibold" style={{ color: "var(--acc)" }}>{number}</span>
+          </div>
+        </div>
+      )}
+
+      {delay > 0 && (
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(247,127,0,.1)", border: "1px solid var(--wn)" }}>
+          <span className="text-lg">⏳</span>
+          <div className="flex-1">
+            <div className="text-[13px] font-bold" style={{ color: "var(--wn)" }}>Running about {delay} min behind</div>
+            <div className="text-[11.5px] text-ink-3">{biz.name} announced this{delayTime ? ` at ${delayTime}` : ""} — your estimate below already includes it.</div>
           </div>
         </div>
       )}

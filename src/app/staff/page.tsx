@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, type Tok, type Svc, type Biz } from "@/lib/db";
+import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, type Tok, type Svc, type Biz } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 import Modal, { Field, inputCls } from "@/components/Modal";
@@ -28,6 +28,8 @@ export default function Staff() {
   const [pPriority, setPPriority] = useState("vip");
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTo, setTransferTo] = useState("");
+  const [showDelay, setShowDelay] = useState(false);
+  const [delayPick, setDelayPick] = useState(15);
 
   useEffect(() => {
     const u1 = listenBusinesses(setBusinesses);
@@ -85,6 +87,21 @@ export default function Staff() {
       flash(`Sent ${serving} → ${r.toName} as ${r.number}`);
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
+    }
+    setBusy(false);
+  }
+
+  async function doDelay(mins: number) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await setDelay(bizId, svcId, mins);
+      setShowDelay(false);
+      flash(mins > 0
+        ? `Delay of +${mins} min announced — ${r.notified} of ${r.waiting} waiting notified`
+        : `Delay cleared — ${r.notified} of ${r.waiting} waiting notified`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Could not set delay.");
     }
     setBusy(false);
   }
@@ -182,6 +199,13 @@ export default function Staff() {
             <ActionBtn label="No Show" icon="❌" danger onClick={() => advance("noshow")} />
             <ActionBtn label="Complete" icon="✅" onClick={() => advance("complete")} />
           </div>
+          <button onClick={() => { setDelayPick(svc?.delayMins || 15); setShowDelay(true); }}
+            className="w-full mb-3 py-2.5 rounded-xl border text-[13px] font-semibold transition hover:brightness-95"
+            style={(svc?.delayMins ?? 0) > 0
+              ? { background: "rgba(247,127,0,.12)", borderColor: "var(--wn)", color: "var(--wn)" }
+              : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t2)" }}>
+            {(svc?.delayMins ?? 0) > 0 ? `⏳ Delayed +${svc?.delayMins} min — tap to update` : "⏳ Announce a delay"}
+          </button>
           <div className="bg-surface border border-border rounded-2xl p-4 mb-3" style={{ boxShadow: "var(--sh)" }}>
             <div className="font-display font-bold text-ink mb-2">Add Priority Token</div>
             <input value={pName} onChange={(e) => setPName(e.target.value)} placeholder="Name or reason…" className="w-full px-3 py-2 mb-2 rounded-lg border border-border bg-surface text-[14px] outline-none focus:border-acc" />
@@ -219,6 +243,39 @@ export default function Staff() {
           <button onClick={doTransfer} disabled={busy || !transferTo} className="w-full py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition">
             {busy ? "Transferring…" : "Transfer customer ↗"}
           </button>
+        </Modal>
+      )}
+
+      {showDelay && (
+        <Modal title={`Delay — ${svcName || "this queue"}`} onClose={() => setShowDelay(false)}>
+          <p className="text-sm text-ink-3 mb-3">Everyone still waiting gets a notification with their new estimated time, and their token screen shows a delay banner. Honesty keeps customers calm.</p>
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {[10, 15, 20, 30].map((m) => (
+              <button key={m} onClick={() => setDelayPick(m)}
+                className="py-2.5 rounded-xl border text-[13px] font-semibold transition"
+                style={delayPick === m
+                  ? { background: "var(--al)", borderColor: "var(--acc)", color: "var(--acc)" }
+                  : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>
+                +{m}m
+              </button>
+            ))}
+          </div>
+          <Field label="Or custom minutes">
+            <input type="number" min={1} max={480} value={delayPick}
+              onChange={(e) => setDelayPick(Math.max(1, Math.min(480, Number(e.target.value) || 0)))}
+              className={inputCls} />
+          </Field>
+          <button onClick={() => doDelay(delayPick)} disabled={busy || delayPick < 1}
+            className="w-full py-3 rounded-xl font-semibold text-white disabled:opacity-50 transition"
+            style={{ background: "var(--wn)" }}>
+            {busy ? "Announcing…" : `Announce +${delayPick} min delay ⏳`}
+          </button>
+          {(svc?.delayMins ?? 0) > 0 && (
+            <button onClick={() => doDelay(0)} disabled={busy}
+              className="w-full mt-2 py-3 rounded-xl font-semibold border border-border text-ink-2 bg-surface hover:bg-surface-2 disabled:opacity-50 transition">
+              ✅ Clear delay — back on schedule
+            </button>
+          )}
         </Modal>
       )}
 

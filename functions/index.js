@@ -137,6 +137,48 @@ exports.transferToken = onCall(opts, async (req) => {
   return out;
 });
 
+// Staff announces a delay (or clears it with 0). Saved on the service so every
+// screen shows it, and everyone still waiting gets a push with their new ETA.
+exports.setDelay = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
+  const { businessId, serviceId, delayMins } = req.data || {};
+  if (!businessId || !serviceId || typeof delayMins !== "number" || delayMins < 0 || delayMins > 480)
+    throw new HttpsError("invalid-argument", "Missing or invalid fields.");
+
+  const ref = db.doc(`businesses/${businessId}/services/${serviceId}`);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Service not found.");
+  const s = snap.data();
+  await ref.update({ delayMins, delayAt: FieldValue.serverTimestamp() });
+
+  const qs = await db.collection("tokens")
+    .where("businessId", "==", businessId)
+    .where("serviceId", "==", serviceId)
+    .where("status", "==", "waiting")
+    .get();
+  let notified = 0;
+  const title = delayMins > 0 ? `Running ~${delayMins} min behind ⏳` : "Back on schedule ✅";
+  for (const d of qs.docs) {
+    const t = d.data();
+    if (!t.fcmToken) continue;
+    const ahead = Math.max(0, t.numericValue - (s.currentServing || 0) - 1);
+    const eta = ahead * (s.avgMins || 5) + delayMins;
+    try {
+      await admin.messaging().send({
+        token: t.fcmToken,
+        notification: {
+          title,
+          body: delayMins > 0
+            ? `${s.name}: token ${t.number} is now estimated in ~${eta} min. Sorry for the wait!`
+            : `${s.name}: the delay is over — token ${t.number} is estimated in ~${eta} min.`,
+        },
+      });
+      notified++;
+    } catch (e) { /* stale token, ignore */ }
+  }
+  return { ok: true, notified, waiting: qs.size };
+});
+
 // Customer cancels their own token.
 exports.cancelToken = onCall(opts, async (req) => {
   const { tokenId } = req.data || {};

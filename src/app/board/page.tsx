@@ -78,10 +78,11 @@ export default function Board() {
                 <div className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,.4)" }}>Counter {i + 1}</div>
                 <div className="num text-4xl sm:text-5xl font-bold leading-none tracking-tight" style={{ color: serving ? "#fff" : "rgba(255,255,255,.3)" }}>{token}</div>
                 <div className="text-xs mt-2" style={{ color: "rgba(255,255,255,.45)" }}>{s.name}</div>
-                <div className="mt-2">
+                <div className="mt-2 flex items-center justify-center gap-1.5 flex-wrap">
                   {serving
                     ? <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(6,214,160,.25)", color: "#06D6A0" }}>● SERVING</span>
                     : <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(255,255,255,.07)", color: "rgba(255,255,255,.35)" }}>OPEN</span>}
+                  {(s.delayMins ?? 0) > 0 && <span className="text-[10px] font-bold px-2.5 py-1 rounded-full" style={{ background: "rgba(247,127,0,.25)", color: "#F77F00" }}>⏳ +{s.delayMins}m</span>}
                 </div>
               </div>
             );
