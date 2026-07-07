@@ -8,7 +8,11 @@ import { httpsCallable } from "firebase/functions";
 export type Biz = {
   id: string; name: string; category: string; categoryIcon: string;
   logo: string; location: string; distanceKm: number; likes: number;
+  alertHeadsUp?: number; alertComeNow?: number;
 };
+
+export const ALERT_HEADS_UP_DEFAULT = 10;
+export const ALERT_COME_NOW_DEFAULT = 3;
 export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;

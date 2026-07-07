@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   listenBusiness, listenBusinesses, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
-  addBranch, updateBranch, addService, updateService, type Branch, type HistTok, type Svc, type Biz,
+  addBranch, updateBranch, addService, updateService, updateBusiness,
+  ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
+  type Branch, type HistTok, type Svc, type Biz,
 } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
@@ -51,6 +53,8 @@ export default function Admin() {
   useEffect(() => { QRCode.toDataURL(`https://waitless-online.vercel.app/app?biz=${bizId}`, { width: 220, margin: 1 }).then(setQrUrl).catch(() => {}); }, [bizId]);
   const [svcModal, setSvcModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [svcForm, setSvcForm] = useState({ name: "", icon: "🩺", prefix: "A", avgMins: 5 });
+  const [headsUp, setHeadsUp] = useState(ALERT_HEADS_UP_DEFAULT);
+  const [comeNow, setComeNow] = useState(ALERT_COME_NOW_DEFAULT);
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [tokens, setTokens] = useState<HistTok[]>([]);
@@ -61,8 +65,11 @@ export default function Admin() {
   // Persisted toggles for the selected business (reset to defaults on switch).
   useEffect(() => {
     setToggles(initial);
+    setHeadsUp(ALERT_HEADS_UP_DEFAULT); setComeNow(ALERT_COME_NOW_DEFAULT);
     return listenBusiness(bizId, (b) => {
       if (b?.featureToggles) setToggles({ ...initial, ...b.featureToggles });
+      if (b && typeof b.alertHeadsUp === "number") setHeadsUp(b.alertHeadsUp);
+      if (b && typeof b.alertComeNow === "number") setComeNow(b.alertComeNow);
     });
   }, [bizId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -119,6 +126,14 @@ export default function Admin() {
     if (svcModal?.mode === "new") { await addService(bizId, data); flash("Service added"); }
     else if (svcModal?.mode === "edit") { await updateService(bizId, svcModal.id, data); flash("Service updated"); }
     setSvcModal(null);
+  }
+
+  async function saveAlerts() {
+    const hu = Math.max(1, Math.min(50, Number(headsUp) || ALERT_HEADS_UP_DEFAULT));
+    const cn = Math.max(1, Math.min(hu, Number(comeNow) || ALERT_COME_NOW_DEFAULT));
+    setHeadsUp(hu); setComeNow(cn);
+    await updateBusiness(bizId, { alertHeadsUp: hu, alertComeNow: cn });
+    flash("Alert timing saved");
   }
 
   if (!ready) return <div className="flex-1 grid place-items-center text-ink-3 text-sm">Loading…</div>;
@@ -219,6 +234,21 @@ export default function Admin() {
               <div className="font-display font-bold text-ink mb-1">Customer QR code</div>
               <div className="text-xs text-ink-3 leading-snug">Print &amp; display at your counter. Customers scan it to join your queue — no app, no signup.</div>
             </div>
+          </div>
+
+          <div className="bg-surface border border-border rounded-2xl p-4 mb-5" style={{ boxShadow: "var(--sh)" }}>
+            <div className="font-display font-bold text-ink mb-1">Customer alert timing</div>
+            <div className="text-xs text-ink-3 leading-snug mb-3">When customers get notified as their turn nears. Counted in <span className="font-semibold">tokens ahead</span>, so it stays accurate even when the queue jumps. Set higher for slow services (doctors), lower for fast ones (a bank counter).</div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="First heads-up (tokens away)">
+                <input type="number" min={1} max={50} className={inputCls} value={headsUp} onChange={(e) => setHeadsUp(Number(e.target.value))} />
+              </Field>
+              <Field label="Come now (tokens away)">
+                <input type="number" min={1} max={headsUp} className={inputCls} value={comeNow} onChange={(e) => setComeNow(Number(e.target.value))} />
+              </Field>
+            </div>
+            <div className="text-[11.5px] text-ink-3 mb-3">Alerts fire at <span className="num font-semibold text-ink-2">{headsUp}</span> away, <span className="num font-semibold text-ink-2">{comeNow}</span> away, and again when it&apos;s their turn.</div>
+            <button onClick={saveAlerts} className="w-full py-2.5 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">Save alert timing</button>
           </div>
 
           <h2 className="font-display font-bold text-ink mb-3">Feature Controls</h2>

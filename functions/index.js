@@ -67,6 +67,7 @@ exports.advanceQueue = onCall(opts, async (req) => {
     ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) * 10) / 10
     : null;
 
+  const prevServing = s.currentServing || 0;
   const batch = db.batch();
   batch.update(d.ref, { status: "served", servedBy: servedBy || null, completedAt: FieldValue.serverTimestamp() });
   batch.update(svcRef, {
@@ -76,33 +77,66 @@ exports.advanceQueue = onCall(opts, async (req) => {
     ...(pace != null ? { paceMins: pace } : {}),
   });
   await batch.commit();
-  await notifyQueue(businessId, serviceId, num);
+
+  // "It's your turn" goes to the person just called.
+  const served = d.data();
+  if (served.fcmToken) {
+    try {
+      await admin.messaging().send({
+        token: served.fcmToken,
+        notification: { title: "It's your turn! 🎉", body: `${served.number} — please proceed to the counter.` },
+        webpush,
+      });
+    } catch (e) { /* stale token, ignore */ }
+  }
+  await notifyQueue(businessId, serviceId, num, prevServing);
   return { num };
 });
 
-// Push to the customer being served + the one 2 away.
-async function notifyQueue(businessId, serviceId, C) {
-  const targets = [
-    { n: C, title: "It's your turn! 🎉", tail: "please proceed to the counter." },
-    { n: C + 2, title: "Almost your turn ⏰", tail: "you're 2 away." },
-  ];
-  for (const t of targets) {
-    const qs = await db.collection("tokens")
-      .where("businessId", "==", businessId)
-      .where("serviceId", "==", serviceId)
-      .where("numericValue", "==", t.n)
-      .get();
-    for (const d of qs.docs) {
-      const data = d.data();
-      if (!data.fcmToken) continue;
-      try {
-        await admin.messaging().send({
-          token: data.fcmToken,
-          notification: { title: t.title, body: `${data.number} — ${t.tail}` },
-          webpush,
-        });
-      } catch (e) { /* stale token, ignore */ }
-    }
+/** The three position-based alert stages a waiting customer passes through. */
+function alertMessage(stage, number, away, spedUp, svcName) {
+  const who = svcName ? `${svcName}: ${number}` : number;
+  if (stage === 2) {
+    return spedUp
+      ? { title: "Queue moving fast — come now ⚡", body: `${who} — the queue sped up, you're ${away} away. Please come to the counter now.` }
+      : { title: "You're almost up ⏰", body: `${who} — you're ${away} away. Please head to the counter.` };
+  }
+  return { title: "Get ready 🔔", body: `${who} — ${away} people ahead. Time to start heading over.` };
+}
+
+/**
+ * Position-based alerts to everyone still waiting. Each token remembers the
+ * highest stage it has been alerted at (alertStage), so it's told once per stage
+ * and jumps (no-shows) are handled — if the queue leaps past a threshold we send
+ * the most relevant alert and flag that it "sped up".
+ */
+async function notifyQueue(businessId, serviceId, C, prevC) {
+  const bizSnap = await db.doc(`businesses/${businessId}`).get();
+  const b = bizSnap.exists ? bizSnap.data() : {};
+  const headsUp = Number.isFinite(b.alertHeadsUp) ? b.alertHeadsUp : 10;
+  const comeNow = Number.isFinite(b.alertComeNow) ? b.alertComeNow : 3;
+  const svcSnap = await db.doc(`businesses/${businessId}/services/${serviceId}`).get();
+  const svcName = svcSnap.exists ? (svcSnap.data().name || "") : "";
+  const spedUp = (C - (prevC || 0)) > 1;
+
+  const waiting = await db.collection("tokens")
+    .where("businessId", "==", businessId)
+    .where("serviceId", "==", serviceId)
+    .where("status", "==", "waiting")
+    .get();
+
+  for (const d of waiting.docs) {
+    const t = d.data();
+    const away = t.numericValue - C;
+    let stage = 0;
+    if (away > 0 && away <= comeNow) stage = 2;
+    else if (away > comeNow && away <= headsUp) stage = 1;
+    if (stage === 0 || stage <= (t.alertStage || 0)) continue;
+    await d.ref.update({ alertStage: stage });
+    if (!t.fcmToken) continue;
+    try {
+      await admin.messaging().send({ token: t.fcmToken, notification: alertMessage(stage, t.number, away, spedUp, svcName), webpush });
+    } catch (e) { /* stale token, ignore */ }
   }
 }
 
@@ -141,7 +175,7 @@ exports.transferToken = onCall(opts, async (req) => {
     tx.update(toRef, { lastIssued: next });
     tx.update(tokRef, {
       serviceId: toServiceId, prefix: s.prefix, numericValue: next, number,
-      status: "waiting", servedBy: null,
+      status: "waiting", servedBy: null, alertStage: 0,
       journey: FieldValue.arrayUnion({
         serviceId: fromServiceId, serviceName: fromSnap.data().name || "",
         number: t.number, servedBy: t.servedBy || null, at: Date.now(),

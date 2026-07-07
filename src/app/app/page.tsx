@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
-  waitingOf, paceOf, hasLivePace, type Biz, type Svc, type Tok,
+  waitingOf, paceOf, hasLivePace, ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
+  type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 
@@ -221,8 +222,8 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   biz: MergedBiz; issued: Issued; onCancel: () => void; onDone: () => void;
 }) {
   const [tok, setTok] = useState<Tok | null>(null);
-  const notifiedSoon = useRef(false);
-  const notifiedTurn = useRef(false);
+  const alertStageRef = useRef(0);
+  const prevServingRef = useRef<number | null>(null);
   useEffect(() => listenToken(issued.id, setTok), [issued.id]);
   useEffect(() => { setupPush(issued.id); }, [issued.id]);
 
@@ -234,20 +235,33 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   const journey = tok?.journey ?? [];
   const svc = biz.services.find((s) => s.id === curSvcId);
 
-  // New stage → let the local notifications fire again for the new queue.
-  useEffect(() => { notifiedSoon.current = false; notifiedTurn.current = false; }, [curSvcId]);
+  // New stage (a transfer) → alerts start fresh for the new queue.
+  useEffect(() => { alertStageRef.current = 0; prevServingRef.current = null; }, [curSvcId]);
 
   const serving = svc?.currentServing ?? 0;
+  const headsUp = biz.alertHeadsUp ?? ALERT_HEADS_UP_DEFAULT;
+  const comeNow = biz.alertComeNow ?? ALERT_COME_NOW_DEFAULT;
+  // Position-based alerts (tab open): heads-up → come-now → your turn, each once.
+  // Jumps from no-shows are handled — a leap past a threshold still fires the most
+  // relevant alert, flagged as "sped up".
   useEffect(() => {
     const away = numeric - serving;
-    if (away <= 0 && !notifiedTurn.current) {
-      notifiedTurn.current = true;
-      showLocalNotification("It's your turn! 🎉", `${number} — please proceed to the counter.`);
-    } else if (away > 0 && away <= 2 && !notifiedSoon.current) {
-      notifiedSoon.current = true;
-      showLocalNotification("Almost your turn ⏰", `${number} — you're ${away} away.`);
-    }
-  }, [serving, numeric, number]);
+    const jump = prevServingRef.current == null ? 1 : Math.max(1, serving - prevServingRef.current);
+    prevServingRef.current = serving;
+    const spedUp = jump > 1;
+    let stage = 0;
+    if (away <= 0) stage = 3;
+    else if (away <= comeNow) stage = 2;
+    else if (away <= headsUp) stage = 1;
+    if (stage <= alertStageRef.current) return;
+    alertStageRef.current = stage;
+    if (stage === 3) showLocalNotification("It's your turn! 🎉", `${number} — please proceed to the counter.`);
+    else if (stage === 2) showLocalNotification(
+      spedUp ? "Queue moving fast — come now ⚡" : "You're almost up ⏰",
+      spedUp ? `${number} — the queue sped up, you're ${away} away. Please come now.` : `${number} — you're ${away} away. Please head to the counter.`,
+    );
+    else showLocalNotification("Get ready 🔔", `${number} — ${away} people ahead. Time to start heading over.`);
+  }, [serving, numeric, number, headsUp, comeNow]);
 
   if (!svc) return <div className="text-center text-sm text-ink-3 py-10">Loading your queue…</div>;
 
