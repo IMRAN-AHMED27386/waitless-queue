@@ -6,7 +6,7 @@ import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
   waitingOf, paceOf, hasLivePace, type Biz, type Svc, type Tok,
 } from "@/lib/db";
-import { setupPush } from "@/lib/messaging";
+import { setupPush, showLocalNotification } from "@/lib/messaging";
 
 const categories = ["All", "Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
 
@@ -239,14 +239,13 @@ function TokenView({ biz, issued, onCancel, onDone }: {
 
   const serving = svc?.currentServing ?? 0;
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window) || Notification.permission !== "granted") return;
     const away = numeric - serving;
     if (away <= 0 && !notifiedTurn.current) {
       notifiedTurn.current = true;
-      new Notification("It's your turn! 🎉", { body: `${number} — please proceed to the counter.` });
+      showLocalNotification("It's your turn! 🎉", `${number} — please proceed to the counter.`);
     } else if (away > 0 && away <= 2 && !notifiedSoon.current) {
       notifiedSoon.current = true;
-      new Notification("Almost your turn ⏰", { body: `${number} — you're ${away} away.` });
+      showLocalNotification("Almost your turn ⏰", `${number} — you're ${away} away.`);
     }
   }, [serving, numeric, number]);
 
