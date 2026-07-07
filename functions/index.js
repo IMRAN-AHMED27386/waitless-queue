@@ -7,6 +7,12 @@ admin.initializeApp();
 const db = admin.firestore();
 const opts = { region: "asia-south1", maxInstances: 10 };
 
+// Brand every push so it looks legitimate (and less like "possible spam") on the
+// lock screen. Icons must be absolute URLs; they live in the web app's /public.
+const ICON = "https://waitless-io.vercel.app/icon-192.png";
+const BADGE = "https://waitless-io.vercel.app/badge-96.png";
+const webpush = { notification: { icon: ICON, badge: BADGE } };
+
 // Customer takes a token. Server controls the number atomically.
 exports.issueToken = onCall(opts, async (req) => {
   const { businessId, serviceId, name, phone, priority } = req.data || {};
@@ -93,6 +99,7 @@ async function notifyQueue(businessId, serviceId, C) {
         await admin.messaging().send({
           token: data.fcmToken,
           notification: { title: t.title, body: `${data.number} — ${t.tail}` },
+          webpush,
         });
       } catch (e) { /* stale token, ignore */ }
     }
@@ -153,6 +160,7 @@ exports.transferToken = onCall(opts, async (req) => {
           title: `Next step: ${out.toName} ➡️`,
           body: `Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}`,
         },
+        webpush,
       });
     } catch (e) { /* stale token, ignore */ }
   }
@@ -195,6 +203,7 @@ exports.setDelay = onCall(opts, async (req) => {
             ? `${s.name}: token ${t.number} is now estimated in ~${eta} min. Sorry for the wait!`
             : `${s.name}: the delay is over — token ${t.number} is estimated in ~${eta} min.`,
         },
+        webpush,
       });
       notified++;
     } catch (e) { /* stale token, ignore */ }

@@ -18,7 +18,7 @@ export async function showLocalNotification(title: string, body: string) {
     if ("serviceWorker" in navigator) {
       const reg = await navigator.serviceWorker.getRegistration();
       if (reg?.showNotification) {
-        await reg.showNotification(title, { body });
+        await reg.showNotification(title, { body, icon: "/icon-192.png", badge: "/badge-96.png", tag: "waitless-queue" });
         return;
       }
     }
