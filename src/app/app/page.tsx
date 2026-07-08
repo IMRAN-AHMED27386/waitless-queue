@@ -266,9 +266,11 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   if (!svc) return <div className="text-center text-sm text-ink-3 py-10">Loading your queue…</div>;
 
   const ahead = Math.max(0, numeric - serving - 1);
-  const yourTurn = serving >= numeric || tok?.status === "served";
+  const parked = tok?.status === "parked";
+  const expired = tok?.status === "noshow";
+  const yourTurn = !parked && (serving >= numeric || tok?.status === "served");
   const cancelled = tok?.status === "cancelled";
-  const delay = yourTurn || cancelled ? 0 : svc.delayMins ?? 0;
+  const delay = yourTurn || parked || expired || cancelled ? 0 : svc.delayMins ?? 0;
   const pace = paceOf(svc);
   const livePace = hasLivePace(svc);
   const estWait = Math.round(ahead * pace + delay);
@@ -304,6 +306,25 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         </div>
       )}
 
+      {parked && (
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(247,127,0,.12)", border: "1px solid var(--wn)" }}>
+          <span className="text-lg">🅿️</span>
+          <div className="flex-1">
+            <div className="text-[13px] font-bold" style={{ color: "var(--wn)" }}>We&apos;re holding your spot</div>
+            <div className="text-[11.5px] text-ink-3">You were called — please come to the counter now. Your place is kept for a few minutes.</div>
+          </div>
+        </div>
+      )}
+      {expired && (
+        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)" }}>
+          <span className="text-lg">⌛</span>
+          <div className="flex-1">
+            <div className="text-[13px] font-bold" style={{ color: "var(--dng)" }}>Token released</div>
+            <div className="text-[11.5px] text-ink-3">You didn&apos;t reach the counter in time. Please take a new token to rejoin the queue.</div>
+          </div>
+        </div>
+      )}
+
       {delay > 0 && (
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(247,127,0,.1)", border: "1px solid var(--wn)" }}>
           <span className="text-lg">⏳</span>
@@ -318,8 +339,8 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         <div className="text-[12.5px]" style={{ color: "rgba(255,255,255,.55)" }}>{svc.name} · {biz.name}</div>
         <div className="num font-bold text-[56px] leading-none tracking-tight mt-1">{number}</div>
         <span className="inline-block mt-2 text-[11.5px] font-semibold px-2.5 py-1 rounded-full"
-          style={yourTurn ? { background: "rgba(6,214,160,.16)", color: "#06D6A0" } : { background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)" }}>
-          {cancelled ? "● Cancelled" : yourTurn ? "● Your turn — proceed!" : "● Waiting"}
+          style={parked ? { background: "rgba(247,127,0,.2)", color: "#FDB44B" } : yourTurn ? { background: "rgba(6,214,160,.16)", color: "#06D6A0" } : { background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)" }}>
+          {cancelled ? "● Cancelled" : expired ? "● Token released" : parked ? "● Held — please come now" : yourTurn ? "● Your turn — proceed!" : "● Waiting"}
         </span>
         <div className="grid grid-cols-3 gap-2 mt-5">
           {[

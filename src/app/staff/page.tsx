@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, type Tok, type Svc, type Biz } from "@/lib/db";
+import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, parkToken, recallToken, listenParked, type Tok, type Svc, type Biz, type ParkedTok } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 import Modal, { Field, inputCls } from "@/components/Modal";
@@ -30,6 +30,8 @@ export default function Staff() {
   const [transferTo, setTransferTo] = useState("");
   const [showDelay, setShowDelay] = useState(false);
   const [delayPick, setDelayPick] = useState(15);
+  const [parked, setParked] = useState<ParkedTok[]>([]);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const u1 = listenBusinesses(setBusinesses);
@@ -50,8 +52,15 @@ export default function Staff() {
     setServed(0); setSkipped(0);
     const u1 = listenService(bizId, svcId, setSvc);
     const u2 = listenQueue(bizId, svcId, setQueue);
-    return () => { u1(); u2(); };
+    const u3 = listenParked(bizId, svcId, setParked);
+    return () => { u1(); u2(); u3(); };
   }, [bizId, svcId]);
+
+  // Tick so "parked Xm ago" stays fresh.
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30000);
+    return () => window.clearInterval(id);
+  }, []);
 
   function flash(msg: string) {
     setToast(msg);
@@ -91,6 +100,31 @@ export default function Staff() {
     setBusy(false);
   }
 
+  async function doPark() {
+    if (busy) return;
+    if (!svc?.currentServing) { flash("No customer at the counter to park."); return; }
+    setBusy(true);
+    try {
+      const r = await parkToken(bizId, svcId);
+      flash(`${r.number} parked — their spot is held. Call the next customer.`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Could not park.");
+    }
+    setBusy(false);
+  }
+
+  async function doRecall(tokenId: string, number: string) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await recallToken(bizId, svcId, tokenId);
+      flash(`Recalled ${number} — now serving.`);
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Could not recall.");
+    }
+    setBusy(false);
+  }
+
   async function doDelay(mins: number) {
     if (busy) return;
     setBusy(true);
@@ -122,6 +156,12 @@ export default function Staff() {
   const shown = queue
     .filter((t) => filter !== "Priority" || t.priority === "vip" || t.priority === "emergency")
     .filter((t) => !q || t.number.toLowerCase().includes(q) || t.customerName.toLowerCase().includes(q));
+
+  // Parked customers still within the 10-min hold window (auto-expire clears the rest).
+  const parkedShown = parked
+    .map((p) => ({ ...p, mins: p.parkedDate ? Math.floor((now - p.parkedDate.getTime()) / 60000) : 0 }))
+    .filter((p) => p.mins < 10)
+    .sort((a, b) => b.mins - a.mins);
 
   if (!ready) return <div className="flex-1 grid place-items-center text-ink-3 text-sm">Loading…</div>;
 
@@ -199,6 +239,31 @@ export default function Staff() {
             <ActionBtn label="No Show" icon="❌" danger onClick={() => advance("noshow")} />
             <ActionBtn label="Complete" icon="✅" onClick={() => advance("complete")} />
           </div>
+          <button onClick={doPark} disabled={busy || !svc?.currentServing}
+            className="w-full mb-3 py-2.5 rounded-xl border text-[13px] font-semibold transition hover:brightness-95 disabled:opacity-50"
+            style={{ background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t2)" }}>
+            🅿️ Park {serving} — hold their spot
+          </button>
+
+          {parkedShown.length > 0 && (
+            <div className="bg-surface border border-border rounded-2xl p-4 mb-3" style={{ boxShadow: "var(--sh)" }}>
+              <div className="font-display font-bold text-ink mb-1">Parked <span className="num text-ink-3 font-semibold">({parkedShown.length})</span></div>
+              <div className="text-[11.5px] text-ink-3 mb-3">Held spots. Tap Recall when they arrive — auto-cleared after 10 min.</div>
+              <div className="flex flex-col gap-2">
+                {parkedShown.map((p) => (
+                  <div key={p.id} className="flex items-center gap-2.5 px-3 py-2 rounded-xl" style={{ background: "rgba(247,127,0,.08)", border: "1px solid rgba(247,127,0,.35)" }}>
+                    <span className="num font-bold text-[13px] px-2.5 py-1 rounded-lg text-white shrink-0" style={{ background: "var(--wn)" }}>{p.number}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-ink text-[13px] truncate">{p.customerName}</div>
+                      <div className="text-[11px] text-ink-3">parked {p.mins === 0 ? "just now" : `${p.mins} min ago`} · expires in {10 - p.mins} min</div>
+                    </div>
+                    <button onClick={() => doRecall(p.id, p.number)} disabled={busy} className="text-[12px] font-semibold px-3 py-1.5 rounded-lg text-white bg-acc hover:bg-acc-dark disabled:opacity-50 shrink-0 transition">Recall</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={() => { setDelayPick(svc?.delayMins || 15); setShowDelay(true); }}
             className="w-full mb-3 py-2.5 rounded-xl border text-[13px] font-semibold transition hover:brightness-95"
             style={(svc?.delayMins ?? 0) > 0

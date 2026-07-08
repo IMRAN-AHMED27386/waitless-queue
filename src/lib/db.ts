@@ -27,7 +27,7 @@ export type Tok = {
   id: string; businessId: string; serviceId: string; prefix: string;
   numericValue: number; number: string; customerName: string; phone: string;
   priority: string; status: string; servedBy?: string | null;
-  journey?: JourneyStage[];
+  journey?: JourneyStage[]; parkedAt?: { toDate: () => Date } | null;
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
@@ -129,6 +129,34 @@ export async function setDelay(businessId: string, serviceId: string, delayMins:
   const fn = httpsCallable(functions, "setDelay");
   const res = await fn({ businessId, serviceId, delayMins });
   return res.data as { ok: boolean; notified: number; waiting: number };
+}
+
+export type ParkedTok = Tok & { parkedDate: Date | null };
+
+/** Live list of customers parked (held) for a service. */
+export function listenParked(businessId: string, serviceId: string, cb: (t: ParkedTok[]) => void) {
+  const q = query(
+    collection(db, "tokens"),
+    where("businessId", "==", businessId),
+    where("serviceId", "==", serviceId),
+    where("status", "==", "parked"),
+  );
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => {
+    const x = d.data() as Record<string, unknown> & { parkedAt?: { toDate?: () => Date } };
+    return { id: d.id, ...(x as object), parkedDate: x.parkedAt?.toDate ? x.parkedAt.toDate() : null } as ParkedTok;
+  })));
+}
+
+/** Staff parks the customer at the counter (called but not present) — holds their slot. */
+export async function parkToken(businessId: string, serviceId: string) {
+  const res = await httpsCallable(functions, "parkToken")({ businessId, serviceId });
+  return res.data as { ok: boolean; number: string };
+}
+
+/** Staff recalls a parked customer back to the counter (they've arrived). */
+export async function recallToken(businessId: string, serviceId: string, tokenId: string) {
+  const res = await httpsCallable(functions, "recallToken")({ businessId, serviceId, tokenId });
+  return res.data as { ok: boolean; number: string };
 }
 
 /** Staff moves the customer being served into another service's queue (multi-stage journey). */

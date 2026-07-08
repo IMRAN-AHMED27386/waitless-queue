@@ -9,6 +9,14 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "numericValue", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "tokens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "parkedAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

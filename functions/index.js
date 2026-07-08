@@ -1,7 +1,10 @@
 // Waitless Cloud Functions — server-side queue logic so the browser can't tamper.
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
+
+const PARK_EXPIRE_MIN = 10; // parked customers who never return are auto no-showed after this
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -243,6 +246,67 @@ exports.setDelay = onCall(opts, async (req) => {
     } catch (e) { /* stale token, ignore */ }
   }
   return { ok: true, notified, waiting: qs.size };
+});
+
+// Staff parks the customer currently at the counter (called but hasn't shown up).
+// Their slot is held — the counter keeps moving — until staff recalls them.
+exports.parkToken = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
+  const { businessId, serviceId } = req.data || {};
+  if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
+  const svcSnap = await db.doc(`businesses/${businessId}/services/${serviceId}`).get();
+  if (!svcSnap.exists) throw new HttpsError("not-found", "Service not found.");
+  const C = svcSnap.data().currentServing || 0;
+  if (!C) throw new HttpsError("failed-precondition", "No customer is being served yet.");
+
+  const qs = await db.collection("tokens")
+    .where("businessId", "==", businessId).where("serviceId", "==", serviceId)
+    .where("numericValue", "==", C).where("status", "==", "served").limit(1).get();
+  if (qs.empty) throw new HttpsError("not-found", "No customer at the counter to park.");
+  const ref = qs.docs[0].ref;
+  const t = qs.docs[0].data();
+  await ref.update({ status: "parked", parkedAt: FieldValue.serverTimestamp() });
+
+  if (t.fcmToken) {
+    try {
+      await admin.messaging().send({
+        token: t.fcmToken,
+        notification: { title: "We're holding your spot 🅿️", body: `${t.number} — you were called. Please come to the counter, we've kept your place.` },
+        webpush,
+      });
+    } catch (e) { /* stale token, ignore */ }
+  }
+  return { ok: true, number: t.number };
+});
+
+// Staff recalls a parked customer back to the counter (they've arrived).
+exports.recallToken = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
+  const { businessId, serviceId, tokenId } = req.data || {};
+  if (!businessId || !serviceId || !tokenId) throw new HttpsError("invalid-argument", "Missing fields.");
+  const tokRef = db.doc(`tokens/${tokenId}`);
+  const tokSnap = await tokRef.get();
+  if (!tokSnap.exists) throw new HttpsError("not-found", "Token not found.");
+  const t = tokSnap.data();
+  if (t.status !== "parked") throw new HttpsError("failed-precondition", "That customer is not parked.");
+
+  const batch = db.batch();
+  batch.update(tokRef, { status: "served", parkedAt: FieldValue.delete() });
+  batch.update(db.doc(`businesses/${businessId}/services/${serviceId}`), { currentServing: t.numericValue });
+  await batch.commit();
+  return { ok: true, number: t.number };
+});
+
+// Every few minutes, no-show any parked customer who never came back.
+exports.expireParked = onSchedule({ schedule: "every 5 minutes", region: "asia-south1" }, async () => {
+  const cutoff = Timestamp.fromMillis(Date.now() - PARK_EXPIRE_MIN * 60000);
+  const qs = await db.collection("tokens")
+    .where("status", "==", "parked").where("parkedAt", "<=", cutoff).get();
+  if (qs.empty) return;
+  const batch = db.batch();
+  qs.docs.forEach((d) => batch.update(d.ref, { status: "noshow", parkedAt: FieldValue.delete() }));
+  await batch.commit();
+  console.log(`expireParked: no-showed ${qs.size} stale parked token(s)`);
 });
 
 // Customer cancels their own token.
