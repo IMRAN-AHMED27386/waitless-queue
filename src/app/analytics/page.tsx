@@ -2,12 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { listenBusinessTokens, type HistTok } from "@/lib/db";
+import { listenBusinessTokens, listenBusinesses, listenAllServices, type HistTok, type Biz, type Svc } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 
-const BUSINESS = "sunshine-clinic";
-const SVC_NAMES: Record<string, string> = { gen: "General Doctor", pha: "Pharmacy", ped: "Pediatrics", lab: "Lab Tests", den: "Dental", eye: "Eye Care" };
 const SVC_COLORS = ["var(--acc)", "#06D6A0", "#E91E8C", "var(--wn)", "var(--pur)", "var(--t3)"];
 const HOURS = Array.from({ length: 12 }, (_, i) => 7 + i); // 7am..6pm
 const fmtHour = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h >= 12 ? "PM" : "AM"}`;
@@ -17,8 +15,33 @@ export default function Analytics() {
   const { ready } = useAuthGuard(["admin", "super"]);
   const [period, setPeriod] = useState("Today");
   const [tokens, setTokens] = useState<HistTok[]>([]);
+  const [businesses, setBusinesses] = useState<Biz[]>([]);
+  const [services, setServices] = useState<Svc[]>([]);
+  const [bizId, setBizId] = useState("");
 
-  useEffect(() => listenBusinessTokens(BUSINESS, setTokens), []);
+  // Load the businesses this account can view; default to the first one.
+  useEffect(() => listenBusinesses((b) => {
+    setBusinesses(b);
+    setBizId((cur) => cur || b[0]?.id || "");
+  }), []);
+
+  useEffect(() => listenAllServices(setServices), []);
+
+  // Re-subscribe to the selected business's tokens whenever it changes.
+  // The listener replaces the token array on its first emission, so no manual clear is needed.
+  useEffect(() => {
+    if (!bizId) return;
+    return listenBusinessTokens(bizId, setTokens);
+  }, [bizId]);
+
+  const bizName = businesses.find((b) => b.id === bizId)?.name ?? "Business";
+
+  // Real service names for the selected business (works for any business, not a fixed map).
+  const svcNames = useMemo(() => {
+    const m: Record<string, string> = {};
+    services.filter((s) => s.businessId === bizId).forEach((s) => (m[s.id] = s.name));
+    return m;
+  }, [services, bizId]);
 
   const a = useMemo(() => {
     const now = new Date();
@@ -30,6 +53,8 @@ export default function Analytics() {
     const total = filtered.length;
     const cancelled = filtered.filter((t) => t.status === "cancelled").length;
     const served = filtered.filter((t) => t.status === "served").length;
+    const noshow = filtered.filter((t) => t.status === "noshow").length;
+    const parked = filtered.filter((t) => t.status === "parked").length;
     const hourly: Record<number, number> = {};
     HOURS.forEach((h) => (hourly[h] = 0));
     filtered.forEach((t) => { if (t.createdAt) { const h = t.createdAt.getHours(); if (h in hourly) hourly[h]++; } });
@@ -38,28 +63,31 @@ export default function Analytics() {
     const byCount: Record<string, number> = {};
     filtered.forEach((t) => (byCount[t.serviceId] = (byCount[t.serviceId] ?? 0) + 1));
     const byService = Object.entries(byCount).sort((x, y) => y[1] - x[1]).slice(0, 4)
-      .map(([id, n], i) => ({ name: SVC_NAMES[id] ?? id, pct: total ? Math.round((n / total) * 100) : 0, color: SVC_COLORS[i] }));
+      .map(([id, n], i) => ({ name: svcNames[id] ?? id, pct: total ? Math.round((n / total) * 100) : 0, color: SVC_COLORS[i] }));
     const byStaff: Record<string, number> = {};
     filtered.forEach((t) => { if (t.status === "served" && t.servedBy) byStaff[t.servedBy] = (byStaff[t.servedBy] ?? 0) + 1; });
     const staffPerf = Object.entries(byStaff).sort((x, y) => y[1] - x[1])
       .map(([name, count]) => ({ name, served: count, share: served ? Math.round((count / served) * 100) : 0 }));
-    return { total, cancelled, served, hourly, maxH, peakHour, byService, staffPerf };
-  }, [tokens, period]);
+    return { total, cancelled, served, noshow, parked, hourly, maxH, peakHour, byService, staffPerf };
+  }, [tokens, period, svcNames]);
 
+  const pct = (n: number) => (a.total ? Math.round((n / a.total) * 100) : 0);
   const stats = [
-    { l: "Total Tokens", v: `${a.total}`, c: "today", icon: "🎫", bg: "var(--al)", color: "#06D6A0" },
-    { l: "Served", v: `${a.served}`, c: `${a.total ? Math.round((a.served / a.total) * 100) : 0}% completion`, icon: "✅", bg: "rgba(6,214,160,.12)", color: "#06D6A0" },
-    { l: "Peak Hour", v: fmtHour(a.peakHour), c: `${a.hourly[a.peakHour]} tokens/hr`, icon: "📈", bg: "rgba(247,127,0,.12)", color: "var(--wn)" },
-    { l: "Cancellations", v: `${a.cancelled}`, c: "this period", icon: "❌", bg: "rgba(239,35,60,.12)", color: "var(--dng)" },
+    { l: "Total Tokens", v: `${a.total}`, c: "this period", icon: "🎫", bg: "var(--al)", color: "var(--acc)" },
+    { l: "Served", v: `${a.served}`, c: `${pct(a.served)}% completion`, icon: "✅", bg: "rgba(6,214,160,.12)", color: "#06D6A0" },
+    { l: "No-shows", v: `${a.noshow}`, c: a.parked ? `${pct(a.noshow)}% · ${a.parked} parked now` : `${pct(a.noshow)}% of total`, icon: "⌛", bg: "rgba(247,127,0,.12)", color: "var(--wn)" },
+    { l: "Cancellations", v: `${a.cancelled}`, c: `${pct(a.cancelled)}% of total`, icon: "❌", bg: "rgba(239,35,60,.12)", color: "var(--dng)" },
   ];
 
   function downloadCSV() {
     const rows: (string | number)[][] = [
-      ["Waitless Analytics — Sunshine Clinic", period],
+      [`Waitless Analytics — ${bizName}`, period],
       [],
       ["Metric", "Value"],
       ["Total Tokens", a.total],
       ["Served", a.served],
+      ["No-shows", a.noshow],
+      ["Parked (now)", a.parked],
       ["Cancelled", a.cancelled],
       ["Peak Hour", fmtHour(a.peakHour)],
       [],
@@ -68,12 +96,15 @@ export default function Analytics() {
       [],
       ["Service", "Share"],
       ...a.byService.map((s) => [s.name, `${s.pct}%`]),
+      [],
+      ["Staff", "Tokens served", "Share"],
+      ...a.staffPerf.map((s) => [s.name, s.served, `${s.share}%`]),
     ];
     const csv = rows.map((r) => r.join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
     link.href = url;
-    link.download = "waitless-analytics.csv";
+    link.download = `waitless-analytics-${bizId || "business"}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -87,11 +118,15 @@ export default function Analytics() {
           <Link href="/" className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Home">←</Link>
           <div>
             <h1 className="font-display text-xl font-bold text-ink">Analytics</h1>
-            <p className="text-xs text-ink-3">{period} · Sunshine Clinic · live</p>
+            <p className="text-xs text-ink-3">{period} · {bizName} · live</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SignOut />
+          <select value={bizId} onChange={(e) => setBizId(e.target.value)} className="text-[13px] font-semibold px-3 py-2 rounded-[10px] border border-border bg-surface text-ink outline-none focus:border-acc max-w-[44vw] truncate" title="Business">
+            {businesses.length === 0 && <option value="">Loading…</option>}
+            {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+          </select>
           <select value={period} onChange={(e) => setPeriod(e.target.value)} className="text-[13px] px-3 py-2 rounded-[10px] border border-border bg-surface outline-none">
             <option>Today</option><option>This Week</option><option>This Month</option>
           </select>
@@ -114,7 +149,10 @@ export default function Analytics() {
 
       <div className="grid lg:grid-cols-[2fr_1fr] gap-5 mb-5">
         <div className="bg-surface border border-border rounded-2xl p-4" style={{ boxShadow: "var(--sh)" }}>
-          <div className="font-display font-bold text-ink mb-4">Tokens Per Hour</div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="font-display font-bold text-ink">Tokens Per Hour</div>
+            <div className="text-[11.5px] font-semibold text-ink-3">Peak · <span className="text-ink-2">{fmtHour(a.peakHour)}</span> ({a.hourly[a.peakHour]}/hr)</div>
+          </div>
           <div className="flex items-end gap-1.5 h-32">
             {HOURS.map((h) => {
               const count = a.hourly[h];

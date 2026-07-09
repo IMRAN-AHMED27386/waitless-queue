@@ -135,21 +135,31 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
       </div>
       <div className="flex flex-col gap-2.5">
         {!loaded && <div className="text-center text-sm text-ink-3 py-10">Loading businesses…</div>}
-        {loaded && list.map((b) => (
-          <button key={b.id} onClick={() => onPick(b)} className="text-left bg-surface border border-border rounded-2xl p-3.5 flex items-center gap-3 hover:border-acc transition" style={{ boxShadow: "var(--sh)" }}>
+        {loaded && list.map((b) => {
+          const paused = b.status === "suspended";
+          return (
+          <button key={b.id} onClick={() => !paused && onPick(b)} disabled={paused} aria-disabled={paused} className="text-left bg-surface border border-border rounded-2xl p-3.5 flex items-center gap-3 enabled:hover:border-acc transition disabled:opacity-60 disabled:cursor-not-allowed" style={{ boxShadow: "var(--sh)" }}>
             <span className="grid place-items-center w-12 h-12 rounded-xl text-2xl shrink-0 bg-surface-2">{b.logo}</span>
             <div className="flex-1 min-w-0">
-              <div className="font-display font-bold text-ink truncate">{b.name}</div>
-              <div className="text-xs text-ink-3 truncate">{b.categoryIcon} {b.category} · {b.location}</div>
-              <div className="flex items-center gap-3 mt-1.5 text-xs">
-                <span className="num font-semibold" style={{ color: "var(--acc)" }}>👥 {b.totalWaiting} waiting</span>
-                <span className="num text-ink-3">👍 {b.likes}</span>
-                <span className="num text-ink-3">📍 {b.distanceKm} km</span>
+              <div className="flex items-center gap-2">
+                <div className="font-display font-bold text-ink truncate">{b.name}</div>
+                {paused && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>Paused</span>}
               </div>
+              <div className="text-xs text-ink-3 truncate">{b.categoryIcon} {b.category} · {b.location}</div>
+              {paused ? (
+                <div className="mt-1.5 text-xs text-ink-3">Not accepting tokens right now</div>
+              ) : (
+                <div className="flex items-center gap-3 mt-1.5 text-xs">
+                  <span className="num font-semibold" style={{ color: "var(--acc)" }}>👥 {b.totalWaiting} waiting</span>
+                  <span className="num text-ink-3">👍 {b.likes}</span>
+                  <span className="num text-ink-3">📍 {b.distanceKm} km</span>
+                </div>
+              )}
             </div>
             <span className="text-ink-3">›</span>
           </button>
-        ))}
+          );
+        })}
         {loaded && list.length === 0 && <div className="text-center text-sm text-ink-3 py-10">No businesses match your search.</div>}
       </div>
     </div>
@@ -157,6 +167,7 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
 }
 
 function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { waiting: number }) => void }) {
+  const paused = biz.status === "suspended";
   return (
     <div>
       <div className="flex items-center gap-3 mb-4">
@@ -166,6 +177,14 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
           <div className="text-xs text-ink-3">{biz.categoryIcon} {biz.category} · {biz.location}</div>
         </div>
       </div>
+      {paused ? (
+        <div className="text-center py-12">
+          <div className="text-5xl mb-3">⏸️</div>
+          <h2 className="font-display text-lg font-bold text-ink mb-1">Not accepting tokens right now</h2>
+          <p className="text-sm text-ink-3 px-4">{biz.name} has paused its online queue. Please check back later or contact them directly.</p>
+        </div>
+      ) : (
+      <>
       <p className="text-sm font-semibold text-ink-2 mb-3">Please choose a service</p>
       <div className="flex flex-col gap-2.5">
         {biz.services.map((s) => (
@@ -182,6 +201,8 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
           </button>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -20,6 +20,10 @@ const webpush = { notification: { icon: ICON, badge: BADGE } };
 exports.issueToken = onCall(opts, async (req) => {
   const { businessId, serviceId, name, phone, priority } = req.data || {};
   if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
+  // Subscription enforcement: a suspended business can't take new tokens.
+  const bizSnap = await db.doc(`businesses/${businessId}`).get();
+  if (bizSnap.exists && bizSnap.data().status === "suspended")
+    throw new HttpsError("failed-precondition", "This business has paused its queue.");
   const serviceRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
   const tokenRef = db.collection("tokens").doc();
   let out = null;

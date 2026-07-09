@@ -9,6 +9,7 @@ export type Biz = {
   id: string; name: string; category: string; categoryIcon: string;
   logo: string; location: string; distanceKm: number; likes: number;
   alertHeadsUp?: number; alertComeNow?: number;
+  plan?: string; status?: string; billingCycle?: string; paidUntil?: string;
 };
 
 export const ALERT_HEADS_UP_DEFAULT = 10;
