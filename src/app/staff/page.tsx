@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { listenQueue, listenService, listenBusinesses, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, parkToken, recallToken, listenParked, type Tok, type Svc, type Biz, type ParkedTok } from "@/lib/db";
+import { listenQueue, listenService, listenBusiness, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, parkToken, recallToken, listenParked, type Tok, type Svc, type ParkedTok } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 import Modal, { Field, inputCls } from "@/components/Modal";
@@ -12,9 +12,9 @@ const selCls = "text-[13px] font-semibold px-3 py-2 rounded-[10px] border border
 
 export default function Staff() {
   const { ready, user } = useAuthGuard(["staff", "admin"]);
-  const [bizId, setBizId] = useState("sunshine-clinic");
-  const [svcId, setSvcId] = useState("gen");
-  const [businesses, setBusinesses] = useState<Biz[]>([]);
+  const bizId = user?.businessId ?? "";
+  const [bizName, setBizName] = useState("—");
+  const [svcId, setSvcId] = useState("");
   const [allServices, setAllServices] = useState<Svc[]>([]);
   const [svc, setSvc] = useState<Svc | null>(null);
   const [queue, setQueue] = useState<Tok[]>([]);
@@ -33,11 +33,13 @@ export default function Staff() {
   const [parked, setParked] = useState<ParkedTok[]>([]);
   const [now, setNow] = useState(() => Date.now());
 
+  // Staff & admin accounts work exactly one business — locked from their account, not switchable.
   useEffect(() => {
-    const u1 = listenBusinesses(setBusinesses);
+    if (!bizId) return;
+    const u1 = listenBusiness(bizId, (b) => setBizName(b?.name ?? "—"));
     const u2 = listenAllServices(setAllServices);
     return () => { u1(); u2(); };
-  }, []);
+  }, [bizId]);
 
   const bizServices = allServices.filter((s) => s.businessId === bizId);
 
@@ -149,7 +151,6 @@ export default function Staff() {
     flash(`Priority token ${t.number} added (${pPriority.toUpperCase()})`);
   }
 
-  const biz = businesses.find((b) => b.id === bizId);
   const serving = svc ? `${svc.prefix}-${svc.currentServing}` : "—";
   const svcName = svc?.name ?? "";
   const q = query.trim().toLowerCase();
@@ -172,13 +173,10 @@ export default function Staff() {
           <Link href="/" className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Home">←</Link>
           <div>
             <h1 className="font-display text-xl font-bold text-ink">Staff Dashboard</h1>
-            <p className="text-xs text-ink-3">{biz?.name ?? "—"} · {svcName || "—"} · ● Live</p>
+            <p className="text-xs text-ink-3">{bizName} · {svcName || "—"} · ● Live</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select value={bizId} onChange={(e) => setBizId(e.target.value)} className={selCls} title="Business">
-            {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
           <select value={svcId} onChange={(e) => setSvcId(e.target.value)} className={selCls} title="Service / counter">
             {bizServices.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
@@ -229,7 +227,7 @@ export default function Staff() {
           <div className="rounded-2xl p-5 text-center text-white mb-3" style={{ background: "linear-gradient(135deg,var(--acc),#2D3A8C)" }}>
             <div className="text-[10px] uppercase tracking-widest font-semibold mb-1.5" style={{ color: "rgba(255,255,255,.6)" }}>Now serving</div>
             <div className="num text-[54px] font-bold leading-none tracking-tight">{serving}</div>
-            <div className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,.6)" }}>{biz?.name} · {svcName}</div>
+            <div className="text-sm mt-1.5" style={{ color: "rgba(255,255,255,.6)" }}>{bizName} · {svcName}</div>
           </div>
           <div className="grid grid-cols-3 gap-2 mb-3">
             <ActionBtn label="Call Next" icon="⏭️" primary onClick={() => advance("next")} />

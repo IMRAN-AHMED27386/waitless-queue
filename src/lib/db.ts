@@ -14,6 +14,8 @@ export type Biz = {
 
 export const ALERT_HEADS_UP_DEFAULT = 10;
 export const ALERT_COME_NOW_DEFAULT = 3;
+export const BUSINESS_CATEGORIES = ["Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
+export const CATEGORY_ICON: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
 export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;
@@ -199,4 +201,11 @@ export function listenBusiness(id: string, cb: (b: (Biz & { featureToggles?: Rec
 
 export function setFeatureToggle(businessId: string, key: string, value: boolean) {
   return updateDoc(doc(db, "businesses", businessId), { [`featureToggles.${key}`]: value });
+}
+
+/** Self-signup: creates the caller's business + links their account to it as admin. */
+export async function onboardBusiness(data: { businessName: string; category: string; location: string; ownerName: string }) {
+  const fn = httpsCallable(functions, "onboardBusiness");
+  const res = await fn(data);
+  return res.data as { businessId: string };
 }

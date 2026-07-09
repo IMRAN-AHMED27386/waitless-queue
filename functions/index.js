@@ -329,3 +329,33 @@ exports.registerPush = onCall(opts, async (req) => {
   return { ok: true };
 });
 
+const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
+
+// A new business owner self-signs-up: they've just created their Firebase Auth
+// account client-side (so req.auth is theirs, can't be spoofed), and this creates
+// their business + links their account to it as its admin, atomically. Runs with
+// admin privileges so it bypasses the `users` collection's client-write-blocked rule.
+exports.onboardBusiness = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign in required.");
+  const { businessName, category, location, ownerName } = req.data || {};
+  if (!businessName || !String(businessName).trim()) throw new HttpsError("invalid-argument", "Business name is required.");
+
+  const uid = req.auth.uid;
+  const userRef = db.doc(`users/${uid}`);
+  const existing = await userRef.get();
+  if (existing.exists) throw new HttpsError("already-exists", "This account is already linked to a business.");
+
+  const icon = CATEGORY_ICON[category] || "🏢";
+  const bizRef = db.collection("businesses").doc();
+  await bizRef.set({
+    name: String(businessName).trim(), category: category || "Clinics", categoryIcon: icon, logo: icon,
+    location: String(location || "").trim(), distanceKm: 0, likes: 0, monthlyTokens: 0,
+    plan: "free", status: "active",
+  });
+  await userRef.set({
+    email: req.auth.token.email || "", role: "admin",
+    name: String(ownerName || "").trim() || "Business Owner", businessId: bizRef.id,
+  });
+  return { businessId: bizRef.id };
+});
+

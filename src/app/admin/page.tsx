@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  listenBusiness, listenBusinesses, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
+  listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
   addBranch, updateBranch, addService, updateService, updateBusiness,
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
-  type Branch, type HistTok, type Svc, type Biz,
+  type Branch, type HistTok, type Svc,
 } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
@@ -40,9 +40,9 @@ const toggleGroups = [
 ];
 
 export default function Admin() {
-  const { ready } = useAuthGuard(["admin"]);
-  const [bizId, setBizId] = useState("sunshine-clinic");
-  const [businesses, setBusinesses] = useState<Biz[]>([]);
+  const { ready, user } = useAuthGuard(["admin"]);
+  const bizId = user?.businessId ?? "";
+  const [bizName, setBizName] = useState("Business");
   const initial: Record<string, boolean> = {};
   toggleGroups.forEach((g) => g.items.forEach((i) => (initial[i.id] = i.on)));
   const [toggles, setToggles] = useState(initial);
@@ -50,7 +50,7 @@ export default function Admin() {
   const [modal, setModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [form, setForm] = useState({ name: "", location: "", counters: 1, status: "open" });
   const [qrUrl, setQrUrl] = useState("");
-  useEffect(() => { QRCode.toDataURL(`https://waitless-online.vercel.app/app?biz=${bizId}`, { width: 220, margin: 1 }).then(setQrUrl).catch(() => {}); }, [bizId]);
+  useEffect(() => { if (!bizId) return; QRCode.toDataURL(`https://waitless-online.vercel.app/app?biz=${bizId}`, { width: 220, margin: 1 }).then(setQrUrl).catch(() => {}); }, [bizId]);
   const [svcModal, setSvcModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [svcForm, setSvcForm] = useState({ name: "", icon: "🩺", prefix: "A", avgMins: 5 });
   const [headsUp, setHeadsUp] = useState(ALERT_HEADS_UP_DEFAULT);
@@ -60,13 +60,13 @@ export default function Admin() {
   const [tokens, setTokens] = useState<HistTok[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
 
-  useEffect(() => listenBusinesses(setBusinesses), []);
-
   // Persisted toggles for the selected business (reset to defaults on switch).
   useEffect(() => {
+    if (!bizId) return;
     setToggles(initial);
     setHeadsUp(ALERT_HEADS_UP_DEFAULT); setComeNow(ALERT_COME_NOW_DEFAULT);
     return listenBusiness(bizId, (b) => {
+      setBizName(b?.name ?? "Business");
       if (b?.featureToggles) setToggles({ ...initial, ...b.featureToggles });
       if (b && typeof b.alertHeadsUp === "number") setHeadsUp(b.alertHeadsUp);
       if (b && typeof b.alertComeNow === "number") setComeNow(b.alertComeNow);
@@ -75,6 +75,7 @@ export default function Admin() {
 
   // Live data for the stat cards + branch cards.
   useEffect(() => {
+    if (!bizId) return;
     const u1 = listenBranches(bizId, setBranches);
     const u2 = listenBusinessTokens(bizId, setTokens);
     const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId)));
@@ -85,7 +86,6 @@ export default function Admin() {
   const completion = tokens.length ? Math.round((served / tokens.length) * 100) : 0;
   const activeBranches = branches.filter((b) => b.status !== "closed").length;
   const avgSvc = services.length ? Math.round(services.reduce((n, s) => n + s.avgMins, 0) / services.length) : 0;
-  const biz = businesses.find((b) => b.id === bizId);
   const stats = [
     { l: "Active Tokens", v: `${tokens.length}`, c: "live total", icon: "🎫", bg: "var(--al)" },
     { l: "Avg Service Time", v: `${avgSvc}m`, c: "across services", icon: "⏱️", bg: "rgba(6,214,160,.12)" },
@@ -146,13 +146,10 @@ export default function Admin() {
           <Link href="/" className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Home">←</Link>
           <div>
             <h1 className="font-display text-xl font-bold text-ink">Business Admin</h1>
-            <p className="text-xs text-ink-3">{biz?.name ?? "Business"} · Branches, services &amp; features</p>
+            <p className="text-xs text-ink-3">{bizName} · Branches, services &amp; features</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <select value={bizId} onChange={(e) => setBizId(e.target.value)} className="text-[13px] font-semibold px-3 py-2 rounded-[10px] border border-border bg-surface text-ink outline-none focus:border-acc max-w-[44vw] truncate" title="Business">
-            {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
           <SignOut />
           <button onClick={openNew} className="text-[13px] font-semibold px-3.5 py-2 rounded-[10px] text-white bg-acc hover:bg-acc-dark transition">+ New Branch</button>
         </div>

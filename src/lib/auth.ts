@@ -1,15 +1,20 @@
 "use client";
 
 import { auth, db } from "./firebase";
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type AppUser = { uid: string; email: string | null; role: string; name?: string };
+export type AppUser = { uid: string; email: string | null; role: string; name?: string; businessId?: string };
 
 export function signIn(email: string, password: string) {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+/** Creates the Firebase Auth account for a new business owner signing up. Signs them in immediately. */
+export function signUp(email: string, password: string) {
+  return createUserWithEmailAndPassword(auth, email, password);
 }
 
 export function signOutUser() {
@@ -34,7 +39,7 @@ export function onUser(cb: (u: AppUser | null) => void) {
     if (!fb) { cb(null); return; }
     const snap = await getDoc(doc(db, "users", fb.uid));
     const data = snap.exists() ? snap.data() : {};
-    cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name });
+    cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId });
   });
 }
 

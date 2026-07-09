@@ -84,6 +84,10 @@ export default function Login() {
             {busy ? "Signing in…" : "Sign in"}
           </button>
 
+          <p className="text-center text-xs text-ink-3 mt-3">
+            New business? <Link href="/signup" className="font-semibold text-acc">Create a free account</Link>
+          </p>
+
           <div className="mt-5 pt-4 border-t border-border">
             <p className="text-[11px] uppercase tracking-wide font-semibold text-ink-3 mb-2">Try a demo</p>
             <button onClick={() => router.push("/app")}

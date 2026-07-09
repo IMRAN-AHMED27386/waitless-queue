@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { listenBusinessTokens, listenBusinesses, listenAllServices, type HistTok, type Biz, type Svc } from "@/lib/db";
+import { listenBusinessTokens, listenBusinesses, listenBusiness, listenAllServices, type HistTok, type Biz, type Svc } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 
@@ -12,29 +12,35 @@ const fmtHour = (h: number) => `${h % 12 === 0 ? 12 : h % 12} ${h >= 12 ? "PM" :
 const shortHour = (h: number) => `${h % 12 === 0 ? 12 : h % 12}${h >= 12 ? "p" : "a"}`;
 
 export default function Analytics() {
-  const { ready } = useAuthGuard(["admin", "super"]);
+  const { ready, user } = useAuthGuard(["admin", "super"]);
+  const isSuper = user?.role === "super";
   const [period, setPeriod] = useState("Today");
   const [tokens, setTokens] = useState<HistTok[]>([]);
   const [businesses, setBusinesses] = useState<Biz[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
-  const [bizId, setBizId] = useState("");
+  const [pickedBizId, setPickedBizId] = useState(""); // super's manual business picker
+  const [bizName, setBizName] = useState("Business");
+  const bizId = isSuper ? pickedBizId : (user?.businessId ?? "");
 
-  // Load the businesses this account can view; default to the first one.
-  useEffect(() => listenBusinesses((b) => {
-    setBusinesses(b);
-    setBizId((cur) => cur || b[0]?.id || "");
-  }), []);
+  // Super can browse every business (platform oversight); admin is locked to their own.
+  useEffect(() => {
+    if (!isSuper) return;
+    return listenBusinesses((b) => { setBusinesses(b); setPickedBizId((cur) => cur || b[0]?.id || ""); });
+  }, [isSuper]);
 
   useEffect(() => listenAllServices(setServices), []);
 
-  // Re-subscribe to the selected business's tokens whenever it changes.
+  // Re-subscribe to the selected business's tokens/name whenever it changes.
   // The listener replaces the token array on its first emission, so no manual clear is needed.
   useEffect(() => {
     if (!bizId) return;
     return listenBusinessTokens(bizId, setTokens);
   }, [bizId]);
 
-  const bizName = businesses.find((b) => b.id === bizId)?.name ?? "Business";
+  useEffect(() => {
+    if (!bizId) return;
+    return listenBusiness(bizId, (b) => setBizName(b?.name ?? "Business"));
+  }, [bizId]);
 
   // Real service names for the selected business (works for any business, not a fixed map).
   const svcNames = useMemo(() => {
@@ -123,10 +129,12 @@ export default function Analytics() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <SignOut />
-          <select value={bizId} onChange={(e) => setBizId(e.target.value)} className="text-[13px] font-semibold px-3 py-2 rounded-[10px] border border-border bg-surface text-ink outline-none focus:border-acc max-w-[44vw] truncate" title="Business">
-            {businesses.length === 0 && <option value="">Loading…</option>}
-            {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-          </select>
+          {isSuper && (
+            <select value={pickedBizId} onChange={(e) => setPickedBizId(e.target.value)} className="text-[13px] font-semibold px-3 py-2 rounded-[10px] border border-border bg-surface text-ink outline-none focus:border-acc max-w-[44vw] truncate" title="Business">
+              {businesses.length === 0 && <option value="">Loading…</option>}
+              {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          )}
           <select value={period} onChange={(e) => setPeriod(e.target.value)} className="text-[13px] px-3 py-2 rounded-[10px] border border-border bg-surface outline-none">
             <option>Today</option><option>This Week</option><option>This Month</option>
           </select>
