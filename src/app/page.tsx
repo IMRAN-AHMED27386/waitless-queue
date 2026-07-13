@@ -117,16 +117,16 @@ export default function Home() {
             <div className="text-[11px] uppercase tracking-wide font-semibold text-ink-3">Free</div>
             <div className="num text-3xl font-bold text-ink mt-1">$0<span className="text-sm text-ink-3 font-normal"> /mo</span></div>
             <ul className="mt-4 flex flex-col gap-2 text-[13px] text-ink-2">
-              <li>✓ 1 branch</li><li>✓ 2 counters</li><li>✓ Online booking</li><li>✓ Basic analytics</li>
+              <li>✓ 1 service queue</li><li>✓ 1,000 tokens / month</li><li>✓ QR booking + live TV board</li><li>✓ Basic analytics</li>
             </ul>
             <Link href="/login" className="block text-center mt-5 py-2.5 rounded-xl font-semibold text-sm border border-border text-ink-2 hover:bg-surface-2 transition">Get started free</Link>
           </div>
           <div className="rounded-2xl p-5 relative" style={{ border: "1.5px solid var(--acc)", background: "linear-gradient(to bottom,#EEF1FF,#fff)" }}>
             <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white px-3 py-0.5 rounded-full bg-acc whitespace-nowrap">Most Popular</span>
             <div className="text-[11px] uppercase tracking-wide font-semibold text-ink-3">Pro</div>
-            <div className="num text-3xl font-bold text-ink mt-1">$29<span className="text-sm text-ink-3 font-normal"> /mo</span></div>
+            <div className="num text-3xl font-bold text-ink mt-1">$49<span className="text-sm text-ink-3 font-normal"> /mo</span></div>
             <ul className="mt-4 flex flex-col gap-2 text-[13px] text-ink-2">
-              <li>✓ 5 branches</li><li>✓ Unlimited counters</li><li>✓ SMS + WhatsApp</li><li>✓ Advanced analytics</li><li>✓ CSV / PDF export</li>
+              <li>✓ Unlimited services &amp; tokens</li><li>✓ 5 branches</li><li>✓ Advanced analytics + CSV</li><li>✓ WhatsApp alerts add-on</li><li>✓ 30-day free trial</li>
             </ul>
             <Link href="/login" className="block text-center mt-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-acc hover:bg-acc-dark transition">Start free trial</Link>
           </div>

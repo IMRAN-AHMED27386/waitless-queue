@@ -10,7 +10,36 @@ export type Biz = {
   logo: string; location: string; distanceKm: number; likes: number;
   alertHeadsUp?: number; alertComeNow?: number;
   plan?: string; status?: string; billingCycle?: string; paidUntil?: string;
+  trialEndsAt?: { toDate: () => Date } | null;
+  monthlyTokens?: number; tokensMonthKey?: string;
+  waEnabled?: boolean; waPaidCount?: number; waPaidMonthKey?: string;
 };
+
+export const FREE_MONTHLY_TOKENS = 1000;
+
+/** Plan the business is effectively on right now — an expired trial counts as free. */
+export function effectivePlan(b?: Pick<Biz, "plan" | "status" | "trialEndsAt"> | null) {
+  if (!b) return "free";
+  if (b.status === "trial") {
+    const ends = b.trialEndsAt?.toDate ? b.trialEndsAt.toDate().getTime() : 0;
+    return ends > Date.now() ? "pro" : "free";
+  }
+  return b.plan ?? "free";
+}
+
+/** Whole days remaining on a trial (0 when none or expired). */
+export function trialDaysLeft(b?: Pick<Biz, "status" | "trialEndsAt"> | null) {
+  if (!b || b.status !== "trial" || !b.trialEndsAt?.toDate) return 0;
+  return Math.max(0, Math.ceil((b.trialEndsAt.toDate().getTime() - Date.now()) / 86400000));
+}
+
+/** Tokens issued this calendar month (the server lazily resets the counter). */
+export function tokensUsedThisMonth(b?: Pick<Biz, "monthlyTokens" | "tokensMonthKey"> | null) {
+  if (!b) return 0;
+  const d = new Date();
+  const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return b.tokensMonthKey === key ? (b.monthlyTokens ?? 0) : 0;
+}
 
 export const ALERT_HEADS_UP_DEFAULT = 10;
 export const ALERT_COME_NOW_DEFAULT = 3;
@@ -31,6 +60,7 @@ export type Tok = {
   numericValue: number; number: string; customerName: string; phone: string;
   priority: string; status: string; servedBy?: string | null;
   journey?: JourneyStage[]; parkedAt?: { toDate: () => Date } | null;
+  waCode?: string; waTo?: string;
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);

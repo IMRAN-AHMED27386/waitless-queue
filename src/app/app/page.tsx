@@ -10,6 +10,8 @@ import {
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 
 const categories = ["All", "Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
+// Platform WhatsApp number (digits only, country code included). Empty = feature hidden.
+const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 
 type Step = "discover" | "service" | "details" | "token" | "feedback";
 const STEP_ORDER: Step[] = ["discover", "service", "details", "token", "feedback"];
@@ -30,6 +32,7 @@ export default function CustomerApp() {
   const [priority, setPriority] = useState("Regular");
   const [issued, setIssued] = useState<Issued | null>(null);
   const [rating, setRating] = useState<number | null>(null);
+  const [issueError, setIssueError] = useState("");
 
   useEffect(() => {
     const u1 = listenBusinesses((b) => { setBizList(b); setLoaded(true); });
@@ -58,11 +61,25 @@ export default function CustomerApp() {
   const svc = biz?.services.find((s) => s.id === svcId) ?? null;
   const stepIndex = STEP_ORDER.indexOf(step);
 
-  async function generate() {
-    if (!bizId || !svcId) return;
-    const t = await issueToken(bizId, svcId, { name, phone, priority });
-    setIssued({ id: t.id, businessId: bizId, serviceId: svcId, number: t.number, numericValue: t.numericValue });
-    setStep("token");
+  async function generate(): Promise<boolean> {
+    if (!bizId || !svcId) return false;
+    setIssueError("");
+    try {
+      const t = await issueToken(bizId, svcId, { name, phone, priority });
+      setIssued({ id: t.id, businessId: bizId, serviceId: svcId, number: t.number, numericValue: t.numericValue });
+      setStep("token");
+      return true;
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? "";
+      setIssueError(
+        code.includes("resource-exhausted")
+          ? "This business has reached its monthly token limit — please ask for help at the counter."
+          : code.includes("failed-precondition")
+            ? "This business isn't taking online tokens right now — please ask at the counter."
+            : "Couldn't get your token. Please check your connection and try again."
+      );
+      return false;
+    }
   }
   async function doCancel() {
     if (issued) await cancelToken(issued.id);
@@ -96,7 +113,7 @@ export default function CustomerApp() {
         {step === "discover" && <Discover list={list} loaded={loaded} cat={cat} setCat={setCat} query={query} setQuery={setQuery} onPick={(b) => { setBizId(b.id); setStep("service"); }} />}
         {step === "service" && biz && <ServicePick biz={biz} onPick={(s) => { setSvcId(s.id); setStep("details"); }} />}
         {step === "details" && biz && svc && (
-          <Details biz={biz} svc={svc} name={name} setName={setName} phone={phone} setPhone={setPhone} priority={priority} setPriority={setPriority} onSubmit={generate} />
+          <Details biz={biz} svc={svc} name={name} setName={setName} phone={phone} setPhone={setPhone} priority={priority} setPriority={setPriority} onSubmit={generate} errorMsg={issueError} />
         )}
         {step === "token" && biz && issued && (
           <TokenView biz={biz} issued={issued} onCancel={doCancel} onDone={() => setStep("feedback")} />
@@ -207,8 +224,8 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
   );
 }
 
-function Details({ biz, svc, name, setName, phone, setPhone, priority, setPriority, onSubmit }: {
-  biz: MergedBiz; svc: Svc; name: string; setName: (v: string) => void; phone: string; setPhone: (v: string) => void; priority: string; setPriority: (v: string) => void; onSubmit: () => void;
+function Details({ biz, svc, name, setName, phone, setPhone, priority, setPriority, onSubmit, errorMsg }: {
+  biz: MergedBiz; svc: Svc; name: string; setName: (v: string) => void; phone: string; setPhone: (v: string) => void; priority: string; setPriority: (v: string) => void; onSubmit: () => Promise<boolean>; errorMsg?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const valid = name.trim() && phone.trim();
@@ -231,7 +248,12 @@ function Details({ biz, svc, name, setName, phone, setPhone, priority, setPriori
           </select>
         </label>
       </div>
-      <button onClick={async () => { setBusy(true); await onSubmit(); }} disabled={!valid || busy} className="w-full mt-4 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 bg-acc hover:bg-acc-dark">
+      {errorMsg && (
+        <div className="mt-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)", color: "var(--dng)" }}>
+          {errorMsg}
+        </div>
+      )}
+      <button onClick={async () => { setBusy(true); const ok = await onSubmit(); if (!ok) setBusy(false); }} disabled={!valid || busy} className="w-full mt-4 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 bg-acc hover:bg-acc-dark">
         {busy ? "Getting your token…" : "Get my token ✦"}
       </button>
       <p className="text-center text-xs text-ink-3 mt-2">No app install needed · You can cancel anytime</p>
@@ -386,6 +408,21 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         </div>
       </div>
 
+      {/* WhatsApp alerts opt-in: patient messages first, so replies ride Meta's
+          free 24h window. Shown only when the business has the add-on enabled. */}
+      {biz.waEnabled && WA_NUMBER && tok?.waCode && !cancelled && !expired && (
+        tok?.waTo ? (
+          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl mt-3 text-[13px] font-semibold" style={{ background: "rgba(37,211,102,.1)", border: "1px solid #25D366", color: "#128C4B" }}>
+            ✅ WhatsApp alerts on — we&apos;ll message you as your turn nears.
+          </div>
+        ) : (
+          <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`TRACK ${tok.waCode} — token ${number}`)}`} target="_blank" rel="noreferrer"
+            className="flex items-center justify-center gap-2 py-3 rounded-xl mt-3 font-semibold text-white" style={{ background: "#25D366" }}>
+            🟢 Get alerts on WhatsApp
+          </a>
+        )
+      )}
+
       <div className="bg-surface border border-border rounded-2xl p-4 mt-3" style={{ boxShadow: "var(--sh)" }}>
         <div className="font-display font-bold text-ink mb-3 flex items-center gap-2">Queue status <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(6,214,160,.12)", color: "#06D6A0" }}>● Live</span></div>
         <div className="flex flex-col gap-1.5">
@@ -403,7 +440,7 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         <button onClick={onCancel} className="py-3 rounded-xl font-semibold text-white" style={{ background: "var(--dng)" }}>Cancel token</button>
         <button onClick={onDone} className="py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">I&apos;m done →</button>
       </div>
-      <p className="text-center text-xs text-ink-3 mt-2">📲 You&apos;ll be notified 2 tokens ahead · updates live</p>
+      <p className="text-center text-xs text-ink-3 mt-2">📲 You&apos;ll be alerted as your turn nears · updates live</p>
     </div>
   );
 }

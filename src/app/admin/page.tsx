@@ -6,7 +6,8 @@ import {
   listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
   addBranch, updateBranch, addService, updateService, updateBusiness,
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
-  type Branch, type HistTok, type Svc,
+  effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
+  type Branch, type HistTok, type Svc, type Biz,
 } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
@@ -43,6 +44,7 @@ export default function Admin() {
   const { ready, user } = useAuthGuard(["admin"]);
   const bizId = user?.businessId ?? "";
   const [bizName, setBizName] = useState("Business");
+  const [bizDoc, setBizDoc] = useState<(Biz & { featureToggles?: Record<string, boolean> }) | null>(null);
   const initial: Record<string, boolean> = {};
   toggleGroups.forEach((g) => g.items.forEach((i) => (initial[i.id] = i.on)));
   const [toggles, setToggles] = useState(initial);
@@ -67,6 +69,7 @@ export default function Admin() {
     setHeadsUp(ALERT_HEADS_UP_DEFAULT); setComeNow(ALERT_COME_NOW_DEFAULT);
     return listenBusiness(bizId, (b) => {
       setBizName(b?.name ?? "Business");
+      setBizDoc(b);
       if (b?.featureToggles) setToggles({ ...initial, ...b.featureToggles });
       if (b && typeof b.alertHeadsUp === "number") setHeadsUp(b.alertHeadsUp);
       if (b && typeof b.alertComeNow === "number") setComeNow(b.alertComeNow);
@@ -81,6 +84,13 @@ export default function Admin() {
     const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId)));
     return () => { u1(); u2(); u3(); };
   }, [bizId]);
+
+  // Plan state for the banner + free-plan gates.
+  const planNow = effectivePlan(bizDoc);
+  const isTrial = bizDoc?.status === "trial" && planNow === "pro";
+  const daysLeft = trialDaysLeft(bizDoc);
+  const usedTokens = tokensUsedThisMonth(bizDoc);
+  const usagePct = Math.min(100, Math.round((usedTokens / FREE_MONTHLY_TOKENS) * 100));
 
   const served = tokens.filter((t) => t.status === "served").length;
   const completion = tokens.length ? Math.round((served / tokens.length) * 100) : 0;
@@ -118,7 +128,14 @@ export default function Admin() {
     setModal(null);
   }
 
-  function openNewSvc() { setSvcForm({ name: "", icon: "🩺", prefix: "A", avgMins: 5 }); setSvcModal({ mode: "new" }); }
+  function openNewSvc() {
+    // Free plan includes exactly one service line — more needs Pro.
+    if (planNow === "free" && services.length >= 1) {
+      flash("Free plan includes 1 service — upgrade to Pro to add more");
+      return;
+    }
+    setSvcForm({ name: "", icon: "🩺", prefix: "A", avgMins: 5 }); setSvcModal({ mode: "new" });
+  }
   function openEditSvc(s: Svc) { setSvcForm({ name: s.name, icon: s.icon, prefix: s.prefix, avgMins: s.avgMins }); setSvcModal({ mode: "edit", id: s.id }); }
   async function saveService() {
     if (!svcForm.name.trim()) return;
@@ -154,6 +171,37 @@ export default function Admin() {
           <button onClick={openNew} className="text-[13px] font-semibold px-3.5 py-2 rounded-[10px] text-white bg-acc hover:bg-acc-dark transition">+ New Branch</button>
         </div>
       </div>
+
+      {/* Plan banner: trial countdown, or free-plan usage with 80%/100% warnings */}
+      {isTrial && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-5" style={{ background: "var(--al)", border: "1px solid var(--acc)" }}>
+          <span className="text-lg">⭐</span>
+          <div className="text-[13px] text-ink-2">
+            <span className="font-bold text-ink">Pro trial — {daysLeft} day{daysLeft === 1 ? "" : "s"} left.</span>{" "}
+            After that you move to the Free plan (1 service · {FREE_MONTHLY_TOKENS.toLocaleString()} tokens/month).
+          </div>
+        </div>
+      )}
+      {planNow === "free" && (
+        <div className="px-4 py-3 rounded-2xl mb-5 bg-surface border" style={{ borderColor: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--bd)" }}>
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+            <div className="text-[13px] font-bold text-ink">Free plan · monthly tokens</div>
+            <div className="num text-[13px] font-semibold" style={{ color: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--t2)" }}>
+              {usedTokens.toLocaleString()} / {FREE_MONTHLY_TOKENS.toLocaleString()}
+            </div>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden bg-surface-2">
+            <div className="h-full rounded-full transition-all" style={{ width: `${usagePct}%`, background: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--acc)" }} />
+          </div>
+          {usagePct >= 80 && (
+            <div className="text-[11.5px] mt-2 font-semibold" style={{ color: usagePct >= 100 ? "var(--dng)" : "var(--wn)" }}>
+              {usagePct >= 100
+                ? "Limit reached — customers can't take new tokens until next month. Upgrade to Pro for unlimited tokens."
+                : "You're close to this month's limit — consider upgrading to Pro for unlimited tokens."}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

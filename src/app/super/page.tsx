@@ -11,14 +11,22 @@ type Row = {
   id: string; name: string; category: string; categoryIcon: string; location: string;
   plan?: string; status?: string; monthlyTokens?: number;
   paidUntil?: string; billingCycle?: string;
+  waEnabled?: boolean; waPaidCount?: number; waPaidMonthKey?: string;
 };
+
+const WA_PRICE_INR = 0.25; // pass-through price per out-of-window WhatsApp message
+const curMonthKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+const waPaidThisMonth = (r: Row) => (r.waPaidMonthKey === curMonthKey() ? r.waPaidCount ?? 0 : 0);
 
 const planStyle: Record<string, React.CSSProperties> = {
   free: { background: "var(--s2)", color: "var(--t3)" },
   pro: { background: "var(--al)", color: "var(--acc)" },
   enterprise: { background: "rgba(114,9,183,.1)", color: "var(--pur)" },
 };
-const planPrice: Record<string, number> = { free: 0, pro: 29, enterprise: 199 };
+const planPrice: Record<string, number> = { free: 0, pro: 49, enterprise: 199 };
 const cap = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) : "—");
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
 const categories = ["Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
@@ -260,6 +268,35 @@ export default function Super() {
                     💵 Record ${priceFor(form.plan, form.billingCycle)} payment (+1 {form.billingCycle === "yearly" ? "year" : "month"})
                   </button>
                 </>
+              )}
+            </div>
+          )}
+
+          {modal.mode === "manage" && (
+            <div className="mt-1 mb-1 rounded-xl border border-border bg-surface-2 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1">
+                  <div className="text-[13px] font-bold text-ink">WhatsApp alerts · add-on</div>
+                  <div className="text-[11.5px] text-ink-3 leading-snug">Free inside the customer&apos;s 24h window · out-of-window messages billed to the client at ₹{WA_PRICE_INR}/msg</div>
+                </div>
+                <button
+                  onClick={async () => {
+                    const next = !modal.row.waEnabled;
+                    await updateBusiness(modal.row.id, { waEnabled: next });
+                    flash(`WhatsApp add-on ${next ? "enabled" : "disabled"} for ${modal.row.name}`);
+                    setModal(null);
+                  }}
+                  role="switch" aria-checked={!!modal.row.waEnabled}
+                  className="relative w-[46px] h-[26px] rounded-full shrink-0 transition-colors"
+                  style={{ background: modal.row.waEnabled ? "#25D366" : "#D1D5DB" }}>
+                  <span className="absolute top-[3px] w-5 h-5 rounded-full bg-white transition-all shadow" style={{ left: modal.row.waEnabled ? "23px" : "3px" }} />
+                </button>
+              </div>
+              {modal.row.waEnabled && (
+                <div className="text-[12px] text-ink-2 mt-2">
+                  Paid (out-of-window) messages this month: <span className="num font-semibold">{waPaidThisMonth(modal.row)}</span>
+                  {" "}· bill <span className="num font-semibold">₹{(waPaidThisMonth(modal.row) * WA_PRICE_INR).toFixed(2)}</span>
+                </div>
               )}
             </div>
           )}

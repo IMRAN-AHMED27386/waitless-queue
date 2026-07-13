@@ -1,10 +1,20 @@
 // Waitless Cloud Functions — server-side queue logic so the browser can't tamper.
-const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onCall, onRequest, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { defineString } = require("firebase-functions/params");
 const admin = require("firebase-admin");
 const { FieldValue, Timestamp } = require("firebase-admin/firestore");
 
 const PARK_EXPIRE_MIN = 10; // parked customers who never return are auto no-showed after this
+const FREE_MONTHLY_TOKENS = 1000; // free-plan cap; trial/pro/enterprise are unlimited
+const TRIAL_DAYS = 30;
+
+// WhatsApp (Meta Cloud API, direct — no middleman). All empty until Imran creates
+// the Meta account; every WhatsApp path silently no-ops while unconfigured.
+const WA_TOKEN = defineString("WA_TOKEN", { default: "" });
+const WA_PHONE_ID = defineString("WA_PHONE_ID", { default: "" });
+const WA_VERIFY_TOKEN = defineString("WA_VERIFY_TOKEN", { default: "waitless-verify" });
+const WA_TEMPLATE = defineString("WA_TEMPLATE", { default: "" }); // approved utility template for out-of-window sends
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -16,28 +26,89 @@ const ICON = "https://waitless-io.vercel.app/icon-192.png";
 const BADGE = "https://waitless-io.vercel.app/badge-96.png";
 const webpush = { notification: { icon: ICON, badge: BADGE } };
 
-// Customer takes a token. Server controls the number atomically.
+const monthKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
+/** Plan the business is effectively on right now — an expired trial counts as free. */
+function effectivePlan(b) {
+  if (!b) return "free";
+  if (b.status === "trial") {
+    const ends = b.trialEndsAt && typeof b.trialEndsAt.toMillis === "function" ? b.trialEndsAt.toMillis() : 0;
+    return ends > Date.now() ? "pro" : "free";
+  }
+  return b.plan || "free";
+}
+
+/**
+ * WhatsApp alert for one token. Free-form text while the customer's 24h window
+ * is open (₹0 — they messaged us first); outside it, falls back to the approved
+ * paid utility template and counts the send for pass-through billing.
+ */
+async function waSend(biz, tok, text) {
+  try {
+    if (!biz || biz.waEnabled !== true || !tok || !tok.waTo) return;
+    const token = WA_TOKEN.value(), phoneId = WA_PHONE_ID.value();
+    if (!token || !phoneId) return;
+    const url = `https://graph.facebook.com/v21.0/${phoneId}/messages`;
+    const openedAt = tok.waWindowAt && typeof tok.waWindowAt.toMillis === "function" ? tok.waWindowAt.toMillis() : 0;
+    const inWindow = Date.now() - openedAt < 24 * 3600 * 1000;
+    const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    if (inWindow) {
+      await fetch(url, { method: "POST", headers, body: JSON.stringify({
+        messaging_product: "whatsapp", to: tok.waTo, type: "text", text: { body: text },
+      }) });
+    } else if (WA_TEMPLATE.value()) {
+      await fetch(url, { method: "POST", headers, body: JSON.stringify({
+        messaging_product: "whatsapp", to: tok.waTo, type: "template",
+        template: { name: WA_TEMPLATE.value(), language: { code: "en" },
+          components: [{ type: "body", parameters: [{ type: "text", text }] }] },
+      }) });
+      // Paid send — count it against the business for pass-through billing.
+      const key = monthKey();
+      const ref = db.doc(`businesses/${tok.businessId}`);
+      if (biz.waPaidMonthKey === key) await ref.update({ waPaidCount: FieldValue.increment(1) });
+      else await ref.update({ waPaidCount: 1, waPaidMonthKey: key });
+    }
+  } catch (e) { console.error("waSend failed:", e.message); }
+}
+
+// Customer takes a token. Server controls the number atomically, enforces the
+// business's plan (suspension, free-plan monthly cap) and counts monthly usage.
 exports.issueToken = onCall(opts, async (req) => {
   const { businessId, serviceId, name, phone, priority } = req.data || {};
   if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
-  // Subscription enforcement: a suspended business can't take new tokens.
-  const bizSnap = await db.doc(`businesses/${businessId}`).get();
-  if (bizSnap.exists && bizSnap.data().status === "suspended")
-    throw new HttpsError("failed-precondition", "This business has paused its queue.");
+  const bizRef = db.doc(`businesses/${businessId}`);
   const serviceRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
   const tokenRef = db.collection("tokens").doc();
   let out = null;
   await db.runTransaction(async (tx) => {
-    const snap = await tx.get(serviceRef);
+    const [bizSnap, snap] = await Promise.all([tx.get(bizRef), tx.get(serviceRef)]);
     if (!snap.exists) throw new HttpsError("not-found", "Service not found.");
+    const b = bizSnap.exists ? bizSnap.data() : {};
+    if (b.status === "suspended")
+      throw new HttpsError("failed-precondition", "This business has paused its queue.");
+
+    // Monthly usage counter (lazy reset when the month changes). Free plan is
+    // capped; trial/pro/enterprise are unlimited but still counted for display.
+    const key = monthKey();
+    const used = b.tokensMonthKey === key ? (b.monthlyTokens || 0) : 0;
+    if (effectivePlan(b) === "free" && used >= FREE_MONTHLY_TOKENS)
+      throw new HttpsError("resource-exhausted",
+        "This business has reached its free monthly token limit. Please ask at the counter.");
+
     const s = snap.data();
     const next = (s.lastIssued || 0) + 1;
     const number = `${s.prefix}-${next}`;
     tx.update(serviceRef, { lastIssued: next });
+    tx.update(bizRef, { monthlyTokens: used + 1, tokensMonthKey: key });
     tx.set(tokenRef, {
       businessId, serviceId, prefix: s.prefix, numericValue: next, number,
       customerName: name || "Guest", phone: phone || "", priority: priority || "regular",
       status: "waiting", createdAt: FieldValue.serverTimestamp(),
+      // Short code the customer texts us on WhatsApp to link their number.
+      waCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
     });
     out = { id: tokenRef.id, number, numericValue: next };
   });
@@ -96,6 +167,8 @@ exports.advanceQueue = onCall(opts, async (req) => {
       });
     } catch (e) { /* stale token, ignore */ }
   }
+  const bizData = (await db.doc(`businesses/${businessId}`).get()).data();
+  await waSend(bizData, served, `🎉 It's your turn! ${served.number} — please proceed to the counter.`);
   await notifyQueue(businessId, serviceId, num, prevServing);
   return { num };
 });
@@ -140,9 +213,11 @@ async function notifyQueue(businessId, serviceId, C, prevC) {
     else if (away > comeNow && away <= headsUp) stage = 1;
     if (stage === 0 || stage <= (t.alertStage || 0)) continue;
     await d.ref.update({ alertStage: stage });
+    const msg = alertMessage(stage, t.number, away, spedUp, svcName);
+    await waSend(b, t, `${msg.title}\n${msg.body}`);
     if (!t.fcmToken) continue;
     try {
-      await admin.messaging().send({ token: t.fcmToken, notification: alertMessage(stage, t.number, away, spedUp, svcName), webpush });
+      await admin.messaging().send({ token: t.fcmToken, notification: msg, webpush });
     } catch (e) { /* stale token, ignore */ }
   }
 }
@@ -205,6 +280,8 @@ exports.transferToken = onCall(opts, async (req) => {
       });
     } catch (e) { /* stale token, ignore */ }
   }
+  const xferBiz = (await db.doc(`businesses/${businessId}`).get()).data();
+  await waSend(xferBiz, tokData, `➡️ Next step: ${out.toName}. Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}`);
   return out;
 });
 
@@ -230,22 +307,18 @@ exports.setDelay = onCall(opts, async (req) => {
   let notified = 0;
   const title = delayMins > 0 ? `Running ~${delayMins} min behind ⏳` : "Back on schedule ✅";
   const paceMins = s.paceMins > 0 ? s.paceMins : (s.avgMins || 5);
+  const delayBiz = (await db.doc(`businesses/${businessId}`).get()).data();
   for (const d of qs.docs) {
     const t = d.data();
-    if (!t.fcmToken) continue;
     const ahead = Math.max(0, t.numericValue - (s.currentServing || 0) - 1);
     const eta = Math.round(ahead * paceMins + delayMins);
+    const body = delayMins > 0
+      ? `${s.name}: token ${t.number} is now estimated in ~${eta} min. Sorry for the wait!`
+      : `${s.name}: the delay is over — token ${t.number} is estimated in ~${eta} min.`;
+    await waSend(delayBiz, t, `${title}\n${body}`);
+    if (!t.fcmToken) continue;
     try {
-      await admin.messaging().send({
-        token: t.fcmToken,
-        notification: {
-          title,
-          body: delayMins > 0
-            ? `${s.name}: token ${t.number} is now estimated in ~${eta} min. Sorry for the wait!`
-            : `${s.name}: the delay is over — token ${t.number} is estimated in ~${eta} min.`,
-        },
-        webpush,
-      });
+      await admin.messaging().send({ token: t.fcmToken, notification: { title, body }, webpush });
       notified++;
     } catch (e) { /* stale token, ignore */ }
   }
@@ -280,6 +353,8 @@ exports.parkToken = onCall(opts, async (req) => {
       });
     } catch (e) { /* stale token, ignore */ }
   }
+  const parkBiz = (await db.doc(`businesses/${businessId}`).get()).data();
+  await waSend(parkBiz, t, `🅿️ We're holding your spot — ${t.number}. You were called; please come to the counter, we've kept your place.`);
   return { ok: true, number: t.number };
 });
 
@@ -350,12 +425,74 @@ exports.onboardBusiness = onCall(opts, async (req) => {
   await bizRef.set({
     name: String(businessName).trim(), category: category || "Clinics", categoryIcon: icon, logo: icon,
     location: String(location || "").trim(), distanceKm: 0, likes: 0, monthlyTokens: 0,
-    plan: "free", status: "active",
+    // Every new business starts on a full-Pro trial (WhatsApp excluded), then
+    // expireTrials drops it to the free plan automatically.
+    plan: "pro", status: "trial",
+    trialEndsAt: Timestamp.fromMillis(Date.now() + TRIAL_DAYS * 86400000),
   });
   await userRef.set({
     email: req.auth.token.email || "", role: "admin",
     name: String(ownerName || "").trim() || "Business Owner", businessId: bizRef.id,
   });
   return { businessId: bizRef.id };
+});
+
+// Once a day, drop expired trials down to the free plan.
+exports.expireTrials = onSchedule({ schedule: "every 24 hours", region: "asia-south1" }, async () => {
+  const qs = await db.collection("businesses")
+    .where("status", "==", "trial")
+    .where("trialEndsAt", "<=", Timestamp.now()).get();
+  if (qs.empty) return;
+  const batch = db.batch();
+  qs.docs.forEach((d) => batch.update(d.ref, {
+    plan: "free", status: "active", trialEndsAt: FieldValue.delete(), trialUsed: true,
+  }));
+  await batch.commit();
+  console.log(`expireTrials: ${qs.size} trial(s) moved to free plan`);
+});
+
+/**
+ * Meta WhatsApp webhook. GET = Meta's one-time verification handshake.
+ * POST = inbound customer messages: "TRACK <code>" links their WhatsApp number
+ * to that token and opens the free 24h reply window; any later message from a
+ * linked number just refreshes the window.
+ */
+exports.whatsappWebhook = onRequest({ region: "asia-south1", maxInstances: 5 }, async (req, res) => {
+  if (req.method === "GET") {
+    if (req.query["hub.mode"] === "subscribe" && req.query["hub.verify_token"] === WA_VERIFY_TOKEN.value()) {
+      res.status(200).send(req.query["hub.challenge"]);
+    } else res.sendStatus(403);
+    return;
+  }
+  if (req.method !== "POST") { res.sendStatus(405); return; }
+  try {
+    const msg = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    if (!msg || msg.type !== "text") { res.sendStatus(200); return; }
+    const from = msg.from; // customer's WhatsApp number (wa_id)
+    const text = String(msg.text?.body || "");
+    const m = text.match(/TRACK\s+([A-Z0-9]{6})/i);
+    if (m) {
+      const code = m[1].toUpperCase();
+      const qs = await db.collection("tokens").where("waCode", "==", code).limit(1).get();
+      if (!qs.empty) {
+        const d = qs.docs[0];
+        await d.ref.update({ waTo: from, waWindowAt: FieldValue.serverTimestamp() });
+        const biz = (await db.doc(`businesses/${d.data().businessId}`).get()).data() || {};
+        await waSend({ ...biz, waEnabled: true }, { ...d.data(), waTo: from, waWindowAt: Timestamp.now() },
+          `✅ Linked! Token ${d.data().number} — we'll message you here as your turn nears.`);
+      }
+    } else {
+      // Known customer said something else — refresh their free window.
+      const qs = await db.collection("tokens").where("waTo", "==", from)
+        .where("status", "in", ["waiting", "parked"]).limit(5).get();
+      const batch = db.batch();
+      qs.docs.forEach((d) => batch.update(d.ref, { waWindowAt: FieldValue.serverTimestamp() }));
+      if (!qs.empty) await batch.commit();
+    }
+    res.sendStatus(200);
+  } catch (e) {
+    console.error("whatsappWebhook:", e.message);
+    res.sendStatus(200); // always 200 so Meta doesn't retry-storm
+  }
 });
 

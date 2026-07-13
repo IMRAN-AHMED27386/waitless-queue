@@ -55,7 +55,7 @@ export default function Signup() {
 
         <div className="bg-surface border border-border rounded-2xl p-6" style={{ boxShadow: "var(--sh)" }}>
           <h1 className="font-display text-xl font-bold text-ink mb-1">Start your free account</h1>
-          <p className="text-sm text-ink-3 mb-5">Set up your queue in under a minute — no card required.</p>
+          <p className="text-sm text-ink-3 mb-5">Set up your queue in under a minute — no card required. Includes a <span className="font-semibold text-ink-2">30-day free Pro trial</span>.</p>
 
           <label className="block mb-3">
             <span className="text-[13px] font-semibold text-ink-2">Business name</span>
