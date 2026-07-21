@@ -164,7 +164,15 @@ export default function Staff() {
     .filter((p) => p.mins < 10)
     .sort((a, b) => b.mins - a.mins);
 
-  if (!ready) return <div className="flex-1 grid place-items-center text-ink-3 text-sm">Loading…</div>;
+  if (!ready) return (
+    <div className="flex-1 grid place-items-center">
+      <div className="flex flex-col items-center gap-3 animate-pulse">
+        <div className="grid place-items-center w-14 h-14 rounded-2xl text-white text-2xl" style={{ background: "linear-gradient(135deg,#4361EE,#818CF8)" }}>⚡</div>
+        <div className="font-display text-xl font-bold text-ink">Waitless</div>
+        <div className="text-sm text-ink-3">Verifying access…</div>
+      </div>
+    </div>
+  );
 
   return (
     <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-4">

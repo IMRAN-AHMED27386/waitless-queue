@@ -124,7 +124,15 @@ export default function Super() {
     { l: "Paid Plans", v: `${paid}`, c: `${rows.length ? Math.round((paid / rows.length) * 100) : 0}% paid ratio`, icon: "⭐", bg: "rgba(114,9,183,.1)" },
   ];
 
-  if (!ready) return <div className="flex-1 grid place-items-center text-ink-3 text-sm">Loading…</div>;
+  if (!ready) return (
+    <div className="flex-1 grid place-items-center">
+      <div className="flex flex-col items-center gap-3 animate-pulse">
+        <div className="grid place-items-center w-14 h-14 rounded-2xl text-white text-2xl" style={{ background: "linear-gradient(135deg,#4361EE,#818CF8)" }}>⚡</div>
+        <div className="font-display text-xl font-bold text-ink">Waitless</div>
+        <div className="text-sm text-ink-3">Verifying access…</div>
+      </div>
+    </div>
+  );
 
   const manageBill = modal?.mode === "manage" ? billStateOf({ ...modal.row, plan: form.plan, status: form.status, billingCycle: form.billingCycle }) : null;
 
