@@ -99,7 +99,7 @@ for (const b of businesses) {
   const { services, ...biz } = b;
   await db.doc(`businesses/${b.id}`).set({ alertHeadsUp: 10, alertComeNow: 3, ...biz, ...(meta[b.id] ?? {}) });
   for (const s of services) {
-    await db.doc(`businesses/${b.id}/services/${s.id}`).set(s);
+    await db.doc(`businesses/${b.id}/services/${s.id}`).set({ ...s, businessId: b.id });
     count++;
   }
 }

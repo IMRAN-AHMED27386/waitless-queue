@@ -114,7 +114,7 @@ export function updateBranch(businessId: string, branchId: string, data: Partial
 }
 
 export function addService(businessId: string, data: { name: string; icon: string; prefix: string; avgMins: number }) {
-  return addDoc(collection(db, `businesses/${businessId}/services`), { ...data, currentServing: 0, lastIssued: 0 });
+  return addDoc(collection(db, `businesses/${businessId}/services`), { ...data, businessId, currentServing: 0, lastIssued: 0 });
 }
 
 export function updateService(businessId: string, serviceId: string, data: Partial<Svc>) {
