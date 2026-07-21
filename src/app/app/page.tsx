@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
   waitingOf, paceOf, hasLivePace, ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
+  listenTokensByPhone,
   type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush, showLocalNotification } from "@/lib/messaging";
@@ -41,10 +42,41 @@ export default function CustomerApp() {
     return () => { u1(); u2(); };
   }, []);
 
-  // QR deep-link: /app?biz=<id> jumps straight to that business's services.
+  // Recovery: QR deep-link /?biz=<id>, token URL /?token=<id>, localStorage
   useEffect(() => {
-    const b = new URLSearchParams(window.location.search).get("biz");
-    if (b) { setBizId(b); setStep("service"); }
+    const params = new URLSearchParams(window.location.search);
+    const bizParam = params.get("biz");
+    const tokenParam = params.get("token");
+    if (tokenParam) {
+      // Direct token URL — resume the token page immediately
+      listenToken(tokenParam, (tok) => {
+        if (tok && (tok.status === "waiting" || tok.status === "parked")) {
+          const saved = { id: tok.id, businessId: tok.businessId, serviceId: tok.serviceId, number: tok.number, numericValue: tok.numericValue };
+          setBizId(tok.businessId); setSvcId(tok.serviceId); setIssued(saved); setStep("token");
+          try { localStorage.setItem("waitless-active-token", JSON.stringify(saved)); } catch {}
+        }
+      });
+      return;
+    }
+    if (bizParam) { setBizId(bizParam); setStep("service"); return; }
+    // Check localStorage for previously saved token
+    try {
+      const saved = localStorage.getItem("waitless-active-token");
+      if (saved) {
+        const parsed = JSON.parse(saved) as Issued;
+        if (parsed.id && parsed.businessId) {
+          listenToken(parsed.id, (tok) => {
+            if (tok && (tok.status === "waiting" || tok.status === "parked")) {
+              setBizId(parsed.businessId); setSvcId(parsed.serviceId); setIssued(parsed); setStep("token");
+            } else if (tok && tok.status === "served") {
+              setBizId(parsed.businessId); setSvcId(parsed.serviceId); setIssued(parsed); setStep("feedback");
+            } else {
+              try { localStorage.removeItem("waitless-active-token"); } catch {}
+            }
+          });
+        }
+      }
+    } catch {}
   }, []);
 
   const merged: MergedBiz[] = useMemo(() => {
@@ -67,7 +99,10 @@ export default function CustomerApp() {
     setIssueError("");
     try {
       const t = await issueToken(bizId, svcId, { name, phone, priority });
-      setIssued({ id: t.id, businessId: bizId, serviceId: svcId, number: t.number, numericValue: t.numericValue });
+      const token = { id: t.id, businessId: bizId, serviceId: svcId, number: t.number, numericValue: t.numericValue };
+      setIssued(token);
+      // Save token to localStorage for recovery
+      try { localStorage.setItem("waitless-active-token", JSON.stringify(token)); } catch {}
       setStep("token");
       return true;
     } catch (e) {
@@ -83,11 +118,12 @@ export default function CustomerApp() {
     }
   }
   async function doCancel() {
-    if (issued) await cancelToken(issued.id);
+    if (issued) { await cancelToken(issued.id); try { localStorage.removeItem("waitless-active-token"); } catch {} }
     reset();
   }
   function reset() {
     setStep("discover"); setBizId(null); setSvcId(null); setIssued(null); setRating(null);
+    try { localStorage.removeItem("waitless-active-token"); } catch {}
   }
 
   return (
@@ -141,8 +177,58 @@ function SectionTitle({ t, s }: { t: string; s?: string }) {
 function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
   list: MergedBiz[]; loaded: boolean; cat: string; setCat: (c: string) => void; query: string; setQuery: (q: string) => void; onPick: (b: MergedBiz) => void;
 }) {
+  const [recoverPhone, setRecoverPhone] = useState("");
+  const [recoveredTokens, setRecoveredTokens] = useState<(Tok & { bizName?: string })[]>([]);
+  const [recovering, setRecovering] = useState(false);
+
+  useEffect(() => {
+    if (!recoverPhone.trim() || recoverPhone.trim().length < 5) { setRecoveredTokens([]); return; }
+    setRecovering(true);
+    const unsub = listenTokensByPhone(recoverPhone.trim(), (tokens) => {
+      setRecoveredTokens(tokens);
+      setRecovering(false);
+    });
+    return unsub;
+  }, [recoverPhone]);
+
   return (
     <div>
+      {/* Token recovery by phone */}
+      <div className="bg-surface border border-border rounded-2xl p-4 mb-4" style={{ boxShadow: "var(--sh)" }}>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-lg">🔍</span>
+          <div className="font-display text-sm font-bold text-ink">Find my token</div>
+        </div>
+        <p className="text-xs text-ink-3 mb-2">Enter the phone number you used to join a queue</p>
+        <input value={recoverPhone} onChange={(e) => setRecoverPhone(e.target.value)}
+          placeholder="Phone (with country code, e.g. +960 7771234)"
+          inputMode="tel"
+          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+        {recovering && <div className="text-xs text-ink-3 mt-2">Searching…</div>}
+        {recoveredTokens.length > 0 && (
+          <div className="flex flex-col gap-2 mt-3">
+            <div className="text-xs font-semibold text-ink-2">{recoveredTokens.length} active token{recoveredTokens.length > 1 ? "s" : ""} found</div>
+            {recoveredTokens.map((t) => (
+              <button key={t.id} onClick={() => {
+                try { localStorage.setItem("waitless-active-token", JSON.stringify({ id: t.id, businessId: t.businessId, serviceId: t.serviceId, number: t.number, numericValue: t.numericValue })); } catch {}
+                window.location.href = `/app?token=${t.id}`;
+              }}
+              className="text-left bg-surface-2 border border-border rounded-xl p-3 flex items-center gap-3 hover:border-acc transition">
+                <span className="num font-bold text-sm px-2.5 py-1 rounded-lg text-white bg-acc">{t.number}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-ink">{t.bizName ?? "Business"}</div>
+                  <div className="text-xs text-ink-3">{t.status === "parked" ? "🅿️ Parked — held for you" : "● Active"}</div>
+                </div>
+                <span className="text-xs font-semibold text-acc">Resume →</span>
+              </button>
+            ))}
+          </div>
+        )}
+        {!recovering && recoverPhone.length >= 5 && recoveredTokens.length === 0 && (
+          <div className="text-xs text-ink-3 mt-2">No active tokens found for this number.</div>
+        )}
+      </div>
+
       <SectionTitle t="Find a place" s="Join a queue from your phone" />
       <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍  Search businesses…" className="w-full px-3.5 py-3 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc mb-3" />
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
@@ -437,11 +523,26 @@ function TokenView({ biz, issued, onCancel, onDone }: {
         </div>
       </div>
 
+      <div className="flex items-center gap-2 mb-2">
+          <button onClick={() => {
+            const url = `${window.location.origin}/app?token=${issued.id}`;
+            try { navigator.clipboard.writeText(url); } catch {}
+          }}
+          className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border border-border text-ink-2 bg-surface hover:bg-surface-2 transition">
+            📋 Copy my token link
+          </button>
+          <button onClick={() => {
+            const url = `${window.location.origin}/app?token=${issued.id}`;
+            try { navigator.clipboard.writeText(url); } catch {}
+          }} className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl text-[13px] font-semibold border border-border text-ink-2 bg-surface hover:bg-surface-2 transition">
+            🔗
+          </button>
+        </div>
       <div className="grid grid-cols-2 gap-2.5 mt-3">
         <button onClick={onCancel} className="py-3 rounded-xl font-semibold text-white" style={{ background: "var(--dng)" }}>Cancel token</button>
         <button onClick={onDone} className="py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">I&apos;m done →</button>
       </div>
-      <p className="text-center text-xs text-ink-3 mt-2">📲 You&apos;ll be alerted as your turn nears · updates live</p>
+      <p className="text-center text-xs text-ink-3 mt-2">📲 You'll be alerted as your turn nears · Copy the link above to come back anytime</p>
     </div>
   );
 }

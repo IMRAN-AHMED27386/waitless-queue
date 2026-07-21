@@ -1,7 +1,7 @@
 import { db, functions } from "./firebase";
 import {
   collection, collectionGroup, doc, onSnapshot, query, where, orderBy,
-  updateDoc, addDoc, serverTimestamp,
+  updateDoc, addDoc, getDoc, serverTimestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
@@ -209,6 +209,26 @@ export function registerPush(data: { tokenId: string; fcmToken: string }) {
 
 export function saveFeedback(data: { businessId: string; serviceId: string; tokenId?: string; rating: number; label: string }) {
   return addDoc(collection(db, "feedback"), { ...data, createdAt: serverTimestamp() });
+}
+
+/** Look up active tokens by phone number for customer recovery. Returns waiting/parked tokens. */
+export function listenTokensByPhone(phone: string, cb: (tokens: (Tok & { bizName?: string })[]) => void) {
+  if (!phone.trim()) { cb([]); return () => {}; }
+  return onSnapshot(
+    query(collection(db, "tokens"), where("phone", "==", phone.trim()), where("status", "in", ["waiting", "parked"])),
+    async (snap) => {
+      const tokens = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tok));
+      // Enrich with business name
+      const enriched = await Promise.all(tokens.map(async (t) => {
+        try {
+          const bizSnap = await getDoc(doc(db, "businesses", t.businessId));
+          return { ...t, bizName: bizSnap.exists() ? (bizSnap.data().name as string) : undefined };
+        } catch { return t; }
+      }));
+      cb(enriched);
+    },
+    () => cb([])
+  );
 }
 
 export type HistTok = Tok & { createdAt: Date | null };
