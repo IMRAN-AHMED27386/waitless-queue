@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, Space_Grotesk } from "next/font/google";
+import { ClientProviders } from "@/components/ClientProviders";
 import "./globals.css";
 
 const syne = Syne({
@@ -36,7 +37,7 @@ export default function RootLayout({
       lang="en"
       className={`${syne.variable} ${dmSans.variable} ${spaceGrotesk.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><ClientProviders>{children}</ClientProviders></body>
     </html>
   );
 }

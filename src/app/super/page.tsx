@@ -6,9 +6,10 @@ import { listenBusinesses, addBusiness, updateBusiness } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 import Modal, { Field, inputCls } from "@/components/Modal";
+import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
 
 type Row = {
-  id: string; name: string; category: string; categoryIcon: string; location: string;
+  id: string; name: string; category: string; categoryIcon: string; country?: string; location: string;
   plan?: string; status?: string; monthlyTokens?: number;
   paidUntil?: string; billingCycle?: string;
   waEnabled?: boolean; waPaidCount?: number; waPaidMonthKey?: string;
@@ -70,19 +71,19 @@ export default function Super() {
   const [query, setQuery] = useState("");
   const [plan, setPlan] = useState("All Plans");
   const [modal, setModal] = useState<null | { mode: "new" } | { mode: "manage"; row: Row }>(null);
-  const [form, setForm] = useState({ name: "", category: "Hospitals", location: "", plan: "free", status: "active", billingCycle: "monthly" });
+  const [form, setForm] = useState({ name: "", category: "Hospitals", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" });
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => listenBusinesses((b) => { setRows(b as Row[]); setLoaded(true); }), []);
 
   function flash(m: string) { setToast(m); window.setTimeout(() => setToast(null), 2000); }
-  function openNew() { setForm({ name: "", category: "Hospitals", location: "", plan: "free", status: "active", billingCycle: "monthly" }); setModal({ mode: "new" }); }
-  function openManage(r: Row) { setForm({ name: r.name, category: r.category, location: r.location, plan: r.plan ?? "free", status: r.status ?? "active", billingCycle: r.billingCycle ?? "monthly" }); setModal({ mode: "manage", row: r }); }
+  function openNew() { setForm({ name: "", category: "Hospitals", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" }); setModal({ mode: "new" }); }
+  function openManage(r: Row) { setForm({ name: r.name, category: r.category, country: r.country ?? "US", location: r.location, plan: r.plan ?? "free", status: r.status ?? "active", billingCycle: r.billingCycle ?? "monthly" }); setModal({ mode: "manage", row: r }); }
   async function save() {
     if (modal?.mode === "new") {
       if (!form.name.trim()) return;
       const paidUntil = isPaidPlan(form.plan) && form.status === "active" ? addCycle(new Date(), form.billingCycle).toISOString() : "";
-      await addBusiness({ name: form.name.trim(), category: form.category, categoryIcon: catIcon[form.category] ?? "🏢", logo: catIcon[form.category] ?? "🏢", location: form.location.trim(), plan: form.plan, status: form.status, billingCycle: form.billingCycle, paidUntil, monthlyTokens: 0, likes: 0, distanceKm: 0 });
+      await addBusiness({ name: form.name.trim(), category: form.category, categoryIcon: catIcon[form.category] ?? "🏢", logo: catIcon[form.category] ?? "🏢", country: form.country, location: form.location.trim(), plan: form.plan, status: form.status, billingCycle: form.billingCycle, paidUntil, monthlyTokens: 0, likes: 0, distanceKm: 0 });
       flash("Business onboarded");
     } else if (modal?.mode === "manage") {
       await updateBusiness(modal.row.id, { plan: form.plan, status: form.status, billingCycle: form.billingCycle });
@@ -199,7 +200,7 @@ export default function Super() {
                   <tr key={r.id} className="hover:bg-surface-2">
                     <td className="px-3 py-3 border-b border-border">
                       <div className="font-semibold text-ink text-[13px]">{r.name}</div>
-                      <div className="text-[11px] text-ink-3">{r.location}</div>
+                      <div className="text-[11px] text-ink-3">{countryByCode(r.country ?? "US")?.flag} {r.location}</div>
                     </td>
                     <td className="px-3 py-3 text-[13px] text-ink border-b border-border whitespace-nowrap">{r.categoryIcon} {r.category}</td>
                     <td className="px-3 py-3 border-b border-border">
@@ -233,8 +234,9 @@ export default function Super() {
           {modal.mode === "new" && (
             <>
               <Field label="Business name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Clinic" /></Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Field label="Category"><select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
+                <Field label="Country"><select className={inputCls} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{DEFAULT_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}</select></Field>
                 <Field label="Location"><input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City" /></Field>
               </div>
             </>

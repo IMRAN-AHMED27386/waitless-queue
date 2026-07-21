@@ -6,10 +6,12 @@ import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import { signUp } from "@/lib/auth";
 import { onboardBusiness, BUSINESS_CATEGORIES } from "@/lib/db";
+import { DEFAULT_COUNTRIES } from "@/lib/countries";
 
 export default function Signup() {
   const [businessName, setBusinessName] = useState("");
   const [category, setCategory] = useState(BUSINESS_CATEGORIES[0]);
+  const [country, setCountry] = useState(DEFAULT_COUNTRIES[0].code);
   const [location, setLocation] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,7 +39,7 @@ export default function Signup() {
       return;
     }
     try {
-      await onboardBusiness({ businessName: businessName.trim(), category, location: location.trim(), ownerName: ownerName.trim() });
+      await onboardBusiness({ businessName: businessName.trim(), category, country, location: location.trim(), ownerName: ownerName.trim() });
       router.replace("/admin");
     } catch {
       setBusy(false);
@@ -71,13 +73,21 @@ export default function Signup() {
               </select>
             </label>
             <label className="block">
-              <span className="text-[13px] font-semibold text-ink-2">Location</span>
-              <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City"
-                className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+              <span className="text-[13px] font-semibold text-ink-2">Country</span>
+              <select value={country} onChange={(e) => setCountry(e.target.value)}
+                className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc">
+                {DEFAULT_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}
+              </select>
             </label>
           </div>
 
           <div className="h-px bg-border my-4" />
+
+          <label className="block mb-3">
+            <span className="text-[13px] font-semibold text-ink-2">City / Location</span>
+            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="City"
+              className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+          </label>
 
           <label className="block mb-3">
             <span className="text-[13px] font-semibold text-ink-2">Your name</span>

@@ -44,7 +44,7 @@ console.log(`✓ Seeded ${users.length} demo users (password: waitless123)`);
 const businesses = [
   {
     id: "sunshine-clinic", name: "Sunshine Clinic", category: "Hospitals", categoryIcon: "🏥",
-    logo: "🩺", location: "Healthcare City, Dubai", distanceKm: 1.2, likes: 124,
+    logo: "🩺", location: "Healthcare City, Dubai", country: "AE", distanceKm: 1.2, likes: 124,
     services: [
       { id: "gen", name: "General Doctor", icon: "👨‍⚕️", prefix: "A", currentServing: 18, lastIssued: 21, avgMins: 4 },
       { id: "ped", name: "Pediatrics", icon: "👶", prefix: "B", currentServing: 11, lastIssued: 15, avgMins: 6 },
@@ -56,7 +56,7 @@ const businesses = [
   },
   {
     id: "city-salon", name: "City Salon", category: "Salons", categoryIcon: "✂️",
-    logo: "💈", location: "Soho, London", distanceKm: 2.4, likes: 88,
+    logo: "💈", location: "Soho, London", country: "GB", distanceKm: 2.4, likes: 88,
     services: [
       { id: "cut", name: "Haircut", icon: "✂️", prefix: "A", currentServing: 12, lastIssued: 14, avgMins: 20 },
       { id: "beard", name: "Beard Trim", icon: "🧔", prefix: "B", currentServing: 8, lastIssued: 9, avgMins: 12 },
@@ -66,7 +66,7 @@ const businesses = [
   },
   {
     id: "bank-maldives", name: "Apex Bank", category: "Banks", categoryIcon: "🏦",
-    logo: "🏦", location: "Bandra, Mumbai", distanceKm: 3.1, likes: 203,
+    logo: "🏦", location: "Bandra, Mumbai", country: "IN", distanceKm: 3.1, likes: 203,
     services: [
       { id: "cash", name: "Cash Deposit", icon: "💵", prefix: "A", currentServing: 230, lastIssued: 242, avgMins: 4 },
       { id: "wd", name: "Withdrawal", icon: "🏧", prefix: "B", currentServing: 145, lastIssued: 153, avgMins: 3 },
@@ -76,7 +76,7 @@ const businesses = [
   },
   {
     id: "civil-service", name: "Passport Office", category: "Government", categoryIcon: "🏛️",
-    logo: "🏛️", location: "Civic District, Singapore", distanceKm: 4.0, likes: 32,
+    logo: "🏛️", location: "Civic District, Singapore", country: "SG", distanceKm: 4.0, likes: 32,
     services: [
       { id: "id", name: "ID Card", icon: "🪪", prefix: "A", currentServing: 88, lastIssued: 105, avgMins: 10 },
       { id: "cert", name: "Certificates", icon: "📜", prefix: "B", currentServing: 33, lastIssued: 39, avgMins: 12 },
@@ -85,7 +85,7 @@ const businesses = [
   },
   {
     id: "harbor-restaurant", name: "Harbor Restaurant", category: "Restaurants", categoryIcon: "🍽️",
-    logo: "🍽️", location: "Hulhumalé, Maldives", distanceKm: 6.5, likes: 72,
+    logo: "🍽️", location: "Hulhumalé, Maldives", country: "MV", distanceKm: 6.5, likes: 72,
     services: [
       { id: "t2", name: "Table for 2", icon: "🍽️", prefix: "A", currentServing: 12, lastIssued: 16, avgMins: 25 },
       { id: "t4", name: "Table for 4", icon: "🍴", prefix: "B", currentServing: 7, lastIssued: 9, avgMins: 30 },

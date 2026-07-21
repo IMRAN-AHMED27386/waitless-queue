@@ -13,6 +13,7 @@ import { useAuthGuard } from "@/lib/auth";
 import SignOut from "@/components/SignOut";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import QRCode from "qrcode";
+import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -57,6 +58,7 @@ export default function Admin() {
   const [svcForm, setSvcForm] = useState({ name: "", icon: "🩺", prefix: "A", avgMins: 5 });
   const [headsUp, setHeadsUp] = useState(ALERT_HEADS_UP_DEFAULT);
   const [comeNow, setComeNow] = useState(ALERT_COME_NOW_DEFAULT);
+  const [bizCountry, setBizCountry] = useState(DEFAULT_COUNTRIES[0].code);
 
   const [branches, setBranches] = useState<Branch[]>([]);
   const [tokens, setTokens] = useState<HistTok[]>([]);
@@ -73,6 +75,7 @@ export default function Admin() {
       if (b?.featureToggles) setToggles({ ...initial, ...b.featureToggles });
       if (b && typeof b.alertHeadsUp === "number") setHeadsUp(b.alertHeadsUp);
       if (b && typeof b.alertComeNow === "number") setComeNow(b.alertComeNow);
+      if (b?.country && DEFAULT_COUNTRIES.some((c) => c.code === b.country)) setBizCountry(b.country);
     });
   }, [bizId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -151,6 +154,12 @@ export default function Admin() {
     setHeadsUp(hu); setComeNow(cn);
     await updateBusiness(bizId, { alertHeadsUp: hu, alertComeNow: cn });
     flash("Alert timing saved");
+  }
+
+  async function saveCountry(code: string) {
+    setBizCountry(code);
+    await updateBusiness(bizId, { country: code });
+    flash(`Country changed · saved`);
   }
 
   if (!ready) return <div className="flex-1 grid place-items-center text-ink-3 text-sm">Loading…</div>;
@@ -278,6 +287,26 @@ export default function Admin() {
             <div>
               <div className="font-display font-bold text-ink mb-1">Customer QR code</div>
               <div className="text-xs text-ink-3 leading-snug">Print &amp; display at your counter. Customers scan it to join your queue — no app, no signup.</div>
+            </div>
+          </div>
+
+          <div className="bg-surface border border-border rounded-2xl p-4 mb-5" style={{ boxShadow: "var(--sh)" }}>
+            <div className="font-display font-bold text-ink mb-1">Country</div>
+            <div className="text-xs text-ink-3 leading-snug mb-3">Your business country determines phone format, currency display, and timezone.</div>
+            <div className="flex flex-wrap gap-2">
+              {DEFAULT_COUNTRIES.map((c) => {
+                const active = c.code === bizCountry;
+                return (
+                  <button key={c.code} onClick={() => saveCountry(c.code)}
+                    className="flex items-center gap-1.5 text-[13px] font-semibold px-3 py-2 rounded-xl border transition"
+                    style={active
+                      ? { background: "var(--al)", borderColor: "var(--acc)", color: "var(--acc)" }
+                      : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>
+                    {c.flag} {c.name}
+                    {active && <span className="text-[10px] ml-1">✓</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

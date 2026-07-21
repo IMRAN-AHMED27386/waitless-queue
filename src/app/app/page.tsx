@@ -8,6 +8,7 @@ import {
   type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush, showLocalNotification } from "@/lib/messaging";
+import { countryByCode } from "@/lib/countries";
 
 const categories = ["All", "Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
 // Platform WhatsApp number (digits only, country code included). Empty = feature hidden.
@@ -162,7 +163,7 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
                 <div className="font-display font-bold text-ink truncate">{b.name}</div>
                 {paused && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>Paused</span>}
               </div>
-              <div className="text-xs text-ink-3 truncate">{b.categoryIcon} {b.category} · {b.location}</div>
+              <div className="text-xs text-ink-3 truncate">{b.categoryIcon} {b.category} · {b.country ? `${countryByCode(b.country)?.flag ?? ""} ` : ""}{b.location}</div>
               {paused ? (
                 <div className="mt-1.5 text-xs text-ink-3">Not accepting tokens right now</div>
               ) : (
@@ -190,8 +191,8 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
       <div className="flex items-center gap-3 mb-4">
         <span className="grid place-items-center w-12 h-12 rounded-xl text-2xl shrink-0 bg-surface-2 border border-border">{biz.logo}</span>
         <div>
-          <h1 className="font-display text-xl font-bold text-ink">{biz.name}</h1>
-          <div className="text-xs text-ink-3">{biz.categoryIcon} {biz.category} · {biz.location}</div>
+<h1 className="font-display text-xl font-bold text-ink">{biz.name}</h1>
+            <div className="text-xs text-ink-3">{biz.categoryIcon} {biz.category} · {biz.country ? `${countryByCode(biz.country)?.flag ?? ""} ` : ""}{biz.location}</div>
         </div>
       </div>
       {paused ? (

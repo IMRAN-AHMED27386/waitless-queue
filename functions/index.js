@@ -412,7 +412,7 @@ const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Ba
 // admin privileges so it bypasses the `users` collection's client-write-blocked rule.
 exports.onboardBusiness = onCall(opts, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Sign in required.");
-  const { businessName, category, location, ownerName } = req.data || {};
+  const { businessName, category, country, location, ownerName } = req.data || {};
   if (!businessName || !String(businessName).trim()) throw new HttpsError("invalid-argument", "Business name is required.");
 
   const uid = req.auth.uid;
@@ -424,9 +424,8 @@ exports.onboardBusiness = onCall(opts, async (req) => {
   const bizRef = db.collection("businesses").doc();
   await bizRef.set({
     name: String(businessName).trim(), category: category || "Clinics", categoryIcon: icon, logo: icon,
+    country: String(country || "US").trim(),
     location: String(location || "").trim(), distanceKm: 0, likes: 0, monthlyTokens: 0,
-    // Every new business starts on a full-Pro trial (WhatsApp excluded), then
-    // expireTrials drops it to the free plan automatically.
     plan: "pro", status: "trial",
     trialEndsAt: Timestamp.fromMillis(Date.now() + TRIAL_DAYS * 86400000),
   });

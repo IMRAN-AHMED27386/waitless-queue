@@ -7,7 +7,7 @@ import { httpsCallable } from "firebase/functions";
 
 export type Biz = {
   id: string; name: string; category: string; categoryIcon: string;
-  logo: string; location: string; distanceKm: number; likes: number;
+  logo: string; location: string; country?: string; distanceKm: number; likes: number;
   alertHeadsUp?: number; alertComeNow?: number;
   plan?: string; status?: string; billingCycle?: string; paidUntil?: string;
   trialEndsAt?: { toDate: () => Date } | null;
@@ -234,7 +234,7 @@ export function setFeatureToggle(businessId: string, key: string, value: boolean
 }
 
 /** Self-signup: creates the caller's business + links their account to it as admin. */
-export async function onboardBusiness(data: { businessName: string; category: string; location: string; ownerName: string }) {
+export async function onboardBusiness(data: { businessName: string; category: string; country?: string; location: string; ownerName: string }) {
   const fn = httpsCallable(functions, "onboardBusiness");
   const res = await fn(data);
   return res.data as { businessId: string };
