@@ -1,5 +1,6 @@
 {
   "projects": {
-    "default": "waitless-online"
+    "default": "waitless-online-token",
+    "waitless-online": "waitless-online"
   }
 }
