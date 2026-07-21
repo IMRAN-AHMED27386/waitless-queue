@@ -2,7 +2,7 @@
 
 import { auth, db } from "./firebase";
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -35,11 +35,17 @@ export function homeFor(role: string) {
 }
 
 export function onUser(cb: (u: AppUser | null) => void) {
-  return onAuthStateChanged(auth, async (fb) => {
+  return onAuthStateChanged(auth, (fb) => {
     if (!fb) { cb(null); return; }
-    const snap = await getDoc(doc(db, "users", fb.uid));
-    const data = snap.exists() ? snap.data() : {};
-    cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId });
+    // Use onSnapshot for instant load + live sync — no extra round-trip delay
+    const unsub = onSnapshot(doc(db, "users", fb.uid), (snap) => {
+      const data = snap.exists() ? snap.data() : {};
+      cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId });
+    }, () => {
+      // Firestore read failed — still return minimal user so pages don't stall
+      cb({ uid: fb.uid, email: fb.email, role: "customer", name: undefined, businessId: undefined });
+    });
+    return unsub;
   });
 }
 

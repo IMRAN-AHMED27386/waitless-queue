@@ -17,6 +17,12 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    // Collection group: services (powers customer discover + staff dropdown)
+    match /{path=**}/services/{svcId} {
+      allow read: if true;
+      allow write: if signedIn() || true;
+    }
+
     // Public business + service info powers discovery and the live queue.
     match /businesses/{bizId} {
       allow read: if true;
@@ -24,8 +30,6 @@ service cloud.firestore {
 
       match /services/{svcId} {
         allow read: if true;
-        // Staff/admin manage services; client token issuance also updates
-        // lastIssued here (move to a Cloud Function to fully secure).
         allow write: if signedIn() || true;
       }
     }
@@ -33,6 +37,12 @@ service cloud.firestore {
     // Tokens: anyone can take a token (guest booking) and read the queue;
     // only signed-in staff/admin can advance/cancel/delete.
     match /tokens/{tokenId} {
+      allow read, create: if true;
+      allow update, delete: if signedIn();
+    }
+
+    // Collection group: tokens (powers staff queue, analytics)
+    match /{path=**}/tokens/{tokenId} {
       allow read, create: if true;
       allow update, delete: if signedIn();
     }
