@@ -38,24 +38,23 @@
   --color-surface: var(--sf);
   --color-surface-2: var(--s2);
   --color-page: var(--bg);
-  --font-display: var(--font-syne);
-  --font-sans: var(--font-dm-sans);
-  --font-num: var(--font-space);
+  --font-display: var(--font-inter);
+  --font-sans: var(--font-inter);
+  --font-num: var(--font-inter);
 }
 
 body {
   background: var(--bg);
   color: var(--t1);
-  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 h1, h2, h3, h4, .font-display {
-  font-family: var(--font-syne), system-ui, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Clean, legible numeric font for stat cards, tokens, metrics */
 .num {
-  font-family: var(--font-space), system-ui, sans-serif;
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
 }

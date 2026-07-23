@@ -4,6 +4,15 @@
       "collectionGroup": "tokens",
       "queryScope": "COLLECTION",
       "fields": [
+        { "fieldPath": "phone", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "numericValue", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tokens",
+      "queryScope": "COLLECTION",
+      "fields": [
         { "fieldPath": "businessId", "order": "ASCENDING" },
         { "fieldPath": "serviceId", "order": "ASCENDING" },
         { "fieldPath": "status", "order": "ASCENDING" },
