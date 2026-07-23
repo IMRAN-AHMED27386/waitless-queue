@@ -97,9 +97,13 @@ export default function Home() {
               Waitless gives customers a token from their phone, shows staff what to call next, and gives owners a live view of every branch before queues become a problem.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-[34px]">
-              <Link href="/app" className="btn btn-primary">Launch Demo →</Link>
-              <Link href="/login" className="btn">Get Started</Link>
-            </div>
+  <Link href="/app" className="btn bg-indigo-600 text-white hover:bg-indigo-700">
+    Launch Demo →
+  </Link>
+  <Link href="/login" className="btn">
+    Get Started
+  </Link>
+</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[640px]">
               {stats.map((s) => (
                 <div key={s.l} className="min-h-[86px] p-[15px] border rounded-lg" style={{ borderColor: "rgba(255,255,255,.12)", background: "rgba(255,255,255,.06)" }}>
