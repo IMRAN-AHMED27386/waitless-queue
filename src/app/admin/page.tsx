@@ -53,7 +53,7 @@ export default function Admin() {
   const [modal, setModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [form, setForm] = useState({ name: "", location: "", counters: 1, status: "open" });
   const [qrUrl, setQrUrl] = useState("");
-  useEffect(() => { if (!bizId) return; QRCode.toDataURL(`https://waitless-online.vercel.app/app?biz=${bizId}`, { width: 220, margin: 1 }).then(setQrUrl).catch(() => {}); }, [bizId]);
+  useEffect(() => { if (!bizId) return; QRCode.toDataURL(`https://waitlessqueue.com/app?biz=${bizId}`, { width: 220, margin: 1 }).then(setQrUrl).catch(() => {}); }, [bizId]);
   const [svcModal, setSvcModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [svcForm, setSvcForm] = useState({ name: "", icon: "🩺", prefix: "A", avgMins: 5 });
   const [headsUp, setHeadsUp] = useState(ALERT_HEADS_UP_DEFAULT);
