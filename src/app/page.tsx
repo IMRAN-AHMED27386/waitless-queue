@@ -97,8 +97,8 @@ export default function Home() {
               Waitless gives customers a token from their phone, shows staff what to call next, and gives owners a live view of every branch before queues become a problem.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-[34px]">
-              <Link href="/app" className="btn btn-primary">Launch Demo →</Link>
-              <Link href="/login" className="btn">Get Started</Link>
+              <Link href="/app" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#315cff] text-white font-extrabold no-underline shadow-[0_14px_30px_rgba(49,92,255,.32)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">Launch Demo →</Link>
+              <Link href="/login" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-white border border-[#dde3f4] text-[#0d1b3e] font-extrabold no-underline hover:-translate-y-px hover:shadow-[0_10px_22px_rgba(0,0,0,.16)] transition-all">Get Started</Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[640px]">
               {stats.map((s) => (
@@ -215,7 +215,7 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/login" className="btn btn-primary">Start with a free queue</Link>
+              <Link href="/login" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#315cff] text-white font-extrabold no-underline shadow-[0_14px_30px_rgba(49,92,255,.32)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">Start with a free queue</Link>
             </div>
             <div className="p-[22px]" style={{ background: "linear-gradient(180deg,#f7faff,#eef4ff)" }}>
               <div className="grid grid-cols-[1fr_0.82fr] gap-[14px] h-full">
@@ -249,7 +249,7 @@ export default function Home() {
                     </div>
                     <p className="text-ink-3 leading-[1.5] text-center">Scan to choose your service and get a live token.</p>
                   </div>
-                  <Link href="/app" className="btn btn-light">Preview customer flow</Link>
+                  <Link href="/app" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-white border border-[#dde3f4] text-[#0d1b3e] font-extrabold no-underline hover:-translate-y-px hover:shadow-[0_10px_22px_rgba(0,0,0,.06)] transition-all">Preview customer flow</Link>
                 </div>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function Home() {
                   <li key={it} className="before:content-[''] before:inline-block before:w-[7px] before:h-[7px] before:mr-[10px] before:rounded-full before:bg-live before:align-[1px]">{it}</li>
                 ))}
               </ul>
-              <Link href={p.link} className={`btn ${p.featured ? "btn-primary" : "btn-light"} mt-auto w-full`}>{p.label}</Link>
+              <Link href={p.link} className={`mt-auto w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg font-extrabold no-underline transition-all ${p.featured ? 'bg-[#315cff] text-white shadow-[0_14px_30px_rgba(49,92,255,.32)] hover:bg-[#1e45d6] hover:-translate-y-px' : 'bg-white border border-[#dde3f4] text-[#0d1b3e] hover:-translate-y-px hover:shadow-[0_10px_22px_rgba(0,0,0,.06)]'}`}>{p.label}</Link>
             </article>
           ))}
         </div>
@@ -339,30 +339,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* ── Shared button styles (injected inline for this page) ── */}
-      <style jsx>{`
-        .btn {
-          display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          min-height: 44px; padding: 0 18px; border: 1px solid var(--bd);
-          border-radius: 8px; background: #fff; color: var(--t1);
-          font-weight: 800; cursor: pointer;
-          transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
-          white-space: nowrap; text-decoration: none;
-        }
-        .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(0,0,0,.16); }
-        .btn-primary {
-          background: #315cff; color: #fff; border-color: transparent;
-          box-shadow: 0 14px 30px rgba(49,92,255,.32);
-        }
-        .btn-primary:hover { background: #1e45d6; }
-        .btn-ghost {
-          background: rgba(255,255,255,.1); color: #fff;
-          border-color: rgba(255,255,255,.2); backdrop-filter: blur(12px);
-        }
-        .btn-ghost:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
-        .btn-light { border-color: var(--bd); background: #fff; color: var(--t1); }
-        .btn-light:hover { box-shadow: 0 10px 22px rgba(0,0,0,.06); }
-      `}</style>
-    </main>
+      </main>
   );
 }
