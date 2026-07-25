@@ -15,7 +15,7 @@ const inputStyle = "w-full px-3.5 py-2.5 rounded-[12px] border border-border bg-
 const listCardStyle = "bg-white border border-border rounded-2xl p-3.5 flex items-center gap-3 transition-all hover:-translate-y-px shadow-[0_2px_8px_rgba(16,24,40,0.02)] hover:shadow-[0_8px_20px_rgba(16,24,40,0.06)]";
 
 export default function Staff() {
-  const { ready, user } = useAuthGuard(["staff", "admin"]);
+  const { ready, user } = useAuthGuard(["staff"]);
   const router = useRouter();
   const bizId = user?.businessId ?? "";
   const [bizName, setBizName] = useState("—");
@@ -194,17 +194,7 @@ export default function Staff() {
           <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId}</div>
 
           <nav className="flex flex-col gap-2">
-            {user?.role === "admin" && (
-              <>
-                <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Dashboard</Link>
-                <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
-              </>
-            )}
-            {user?.role === "super" && (
-              <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Super Admin</Link>
-            )}
             <Link href="/staff" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">🎫 Live Queue</Link>
-            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
           </nav>
         </div>
         

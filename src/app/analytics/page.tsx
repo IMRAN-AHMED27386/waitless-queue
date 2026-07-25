@@ -142,9 +142,10 @@ export default function Analytics() {
           <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">Analytics Dashboard</div>
 
           <nav className="flex flex-col gap-2">
-            {!isSuper && <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] text-white/70 font-semibold hover:bg-white/5 hover:text-white transition">🏥 Waitlist Manager</Link>}
-            {isSuper && <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] text-white/70 font-semibold hover:bg-white/5 hover:text-white transition">🏢 Super Admin</Link>}
-            <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">📈 Analytics</Link>
+            {!isSuper && <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Dashboard</Link>}
+            {isSuper && <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 All Businesses</Link>}
+            <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">📊 Analytics</Link>
+            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
           </nav>
         </div>
         

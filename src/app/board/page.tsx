@@ -7,7 +7,7 @@ import { listenBusinesses, listenAllServices, type Biz, type Svc } from "@/lib/d
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 
 export default function Board() {
-  const { ready, user } = useAuthGuard(["staff", "admin", "super"]);
+  const { ready, user } = useAuthGuard(["admin", "super"]);
   const router = useRouter();
   const [clock, setClock] = useState("--:--:--");
   const [voice, setVoice] = useState(true);
@@ -87,10 +87,10 @@ export default function Board() {
               </>
             )}
             {user?.role === "super" && (
-              <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Super Admin</Link>
-            )}
-            {user?.role !== "super" && (
-              <Link href="/staff" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🎫 Live Queue</Link>
+              <>
+                <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 All Businesses</Link>
+                <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
+              </>
             )}
             <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">📺 TV Board</Link>
           </nav>
