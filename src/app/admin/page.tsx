@@ -121,14 +121,19 @@ export default function Admin() {
   function openEdit(b: Branch) { setForm({ name: b.name, location: b.location, counters: b.counters, status: b.status }); setModal({ mode: "edit", id: b.id }); }
   async function saveBranch() {
     if (!form.name.trim()) return;
-    if (modal?.mode === "new") {
-      await addBranch(bizId, { name: form.name.trim(), location: form.location.trim(), status: form.status, inQueue: 0, counters: Number(form.counters), avgWait: "—" });
-      flash("Branch added");
-    } else if (modal?.mode === "edit") {
-      await updateBranch(bizId, modal.id, { name: form.name.trim(), location: form.location.trim(), status: form.status, counters: Number(form.counters) });
-      flash("Branch updated");
+    try {
+      if (modal?.mode === "new") {
+        await addBranch(bizId, { name: form.name.trim(), location: form.location.trim(), status: form.status, inQueue: 0, counters: Number(form.counters), avgWait: "—" });
+        flash("Branch added");
+      } else if (modal?.mode === "edit") {
+        await updateBranch(bizId, modal.id, { name: form.name.trim(), location: form.location.trim(), status: form.status, counters: Number(form.counters) });
+        flash("Branch updated");
+      }
+      setModal(null);
+    } catch (error: any) {
+      console.error(error);
+      flash("Error: " + (error.message || "Failed to save branch"));
     }
-    setModal(null);
   }
 
   function openNewSvc() {
