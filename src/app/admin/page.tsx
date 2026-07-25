@@ -177,7 +177,7 @@ export default function Admin() {
       
       {/* HEADER */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-        <div class="flex items-center gap-4">
+        <div className="flex items-center gap-4">
           <Link href="/" className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 hover:border-acc hover:text-acc transition shadow-sm">&larr;</Link>
           <div>
             <h1 className="font-display text-[1.6rem] leading-tight font-bold text-ink">Business Admin</h1>
