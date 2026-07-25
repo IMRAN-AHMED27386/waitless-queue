@@ -299,7 +299,7 @@ export default function Admin() {
                         
                         <div className="grid grid-cols-2 gap-4">
                           <button onClick={() => openEdit(b)} className="py-3 rounded-[12px] text-[0.85rem] font-bold border border-border bg-white text-ink-2 hover:bg-surface-2 hover:shadow-sm transition">Edit Branch</button>
-                          <Link href="/staff" className="flex items-center justify-center py-3 rounded-[12px] text-[0.85rem] font-bold text-white transition shadow-[0_8px_20px_rgba(49,92,255,0.2)] hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(49,92,255,0.3)]" style={{ background: "#315cff" }}>View Queue &rsaquo;</Link>
+                          <Link href="/board" className="flex items-center justify-center py-3 rounded-[12px] text-[0.85rem] font-bold text-white transition shadow-[0_8px_20px_rgba(49,92,255,0.2)] hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(49,92,255,0.3)]" style={{ background: "#315cff" }}>View on Board &rsaquo;</Link>
                         </div>
                       </div>
                     );

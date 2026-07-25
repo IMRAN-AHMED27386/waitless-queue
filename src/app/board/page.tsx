@@ -65,13 +65,27 @@ export default function Board() {
     </div>
   );
 
+  const isSuper = user?.role === "super";
+  const sidebarBg = isSuper
+    ? "linear-gradient(180deg,#1c0a30 0%,#2a104a 100%)"
+    : "linear-gradient(180deg,#0a1128 0%,#162550 100%)";
+  const sidebarShadow = isSuper
+    ? "4px 0 24px rgba(28,10,48,0.15)"
+    : "4px 0 24px rgba(10,17,40,0.15)";
+  const logoBg = isSuper
+    ? "linear-gradient(135deg,#7209b7,#b5179e)"
+    : "linear-gradient(135deg,#315cff,#59d4d1)";
+  const logoShadow = isSuper
+    ? "0 8px 24px rgba(114,9,183,.4)"
+    : "0 8px 24px rgba(49,92,255,.4)";
+
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: "linear-gradient(180deg,#0a1128 0%,#162550 100%)", boxShadow: "4px 0 24px rgba(10,17,40,0.15)" }}>
+      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: sidebarBg, boxShadow: sidebarShadow }}>
         <div className="p-7">
           <div className="flex items-center gap-3.5 mb-12">
-            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)", boxShadow: "0 8px 24px rgba(49,92,255,.4)" }}>⚡</span>
+            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
             <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
           </div>
           

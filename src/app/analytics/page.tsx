@@ -118,28 +118,41 @@ export default function Analytics() {
   }
 
   if (!ready) return (
-    <div className="flex-1 h-screen grid place-items-center bg-[#f8fafc]">
+    <div className="flex-1 h-screen grid place-items-center bg-[#f5f8fd]">
       <div className="flex flex-col items-center gap-3 animate-pulse">
-        <div className="grid place-items-center w-16 h-16 rounded-[14px] text-white text-3xl shadow-xl" style={{ background: "linear-gradient(135deg,#0284c7,#38bdf8)" }}>⚡</div>
+        <div className="grid place-items-center w-16 h-16 rounded-[14px] text-white text-3xl shadow-xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)" }}>⚡</div>
         <div className="font-display text-2xl font-bold text-ink tracking-tight mt-2">Waitless</div>
         <div className="text-[0.95rem] font-medium text-ink-3">Loading analytics…</div>
       </div>
     </div>
   );
 
+  const sidebarBg = isSuper
+    ? "linear-gradient(180deg,#1c0a30 0%,#2a104a 100%)"
+    : "linear-gradient(180deg,#0a1128 0%,#162550 100%)";
+  const sidebarShadow = isSuper
+    ? "4px 0 24px rgba(28,10,48,0.15)"
+    : "4px 0 24px rgba(10,17,40,0.15)";
+  const logoBg = isSuper
+    ? "linear-gradient(135deg,#7209b7,#b5179e)"
+    : "linear-gradient(135deg,#315cff,#59d4d1)";
+  const logoShadow = isSuper
+    ? "0 8px 24px rgba(114,9,183,.4)"
+    : "0 8px 24px rgba(49,92,255,.4)";
+
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f8fafc]">
+    <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: "linear-gradient(180deg,#0f172a 0%,#1e293b 100%)", boxShadow: "4px 0 24px rgba(15,23,42,0.15)" }}>
+      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: sidebarBg, boxShadow: sidebarShadow }}>
         <div className="p-7">
           <div className="flex items-center gap-3.5 mb-12">
-            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: "linear-gradient(135deg,#0284c7,#38bdf8)", boxShadow: "0 8px 24px rgba(2,132,199,.4)" }}>⚡</span>
+            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
             <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
           </div>
           
           <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>
           <div className="font-display font-bold text-[1.1rem] px-1.5 mb-1 truncate leading-tight">{bizName}</div>
-          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">Analytics Dashboard</div>
+          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId}</div>
 
           <nav className="flex flex-col gap-2">
             {!isSuper && <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Dashboard</Link>}
