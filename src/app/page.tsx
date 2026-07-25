@@ -29,9 +29,9 @@ const features = [
 ];
 
 const prices = [
-  { plan: "Free", name: "Starter desk", price: "$0", period: "/mo", items: ["1 service queue", "1,000 monthly tokens", "QR booking and live TV board", "Basic analytics"], link: "/login", label: "Get started free", featured: false },
-  { plan: "Pro", name: "Growing branch", price: "$299", period: "/mo", items: ["Unlimited services and tokens", "5 branches included", "Advanced analytics and CSV export", "WhatsApp alerts add-on", "30-day free trial"], link: "/login", label: "Start free trial", featured: true },
-  { plan: "Enterprise", name: "Network rollout", price: "$599", period: "+ Custom", items: ["Unlimited branches", "White-label setup", "API access", "Custom integrations", "Dedicated support"], link: "/login", label: "Contact sales", featured: false },
+  { plan: "Free", name: "Starter desk", price: "$0", crossedPrice: "$49", period: "/mo", items: ["1 service queue", "1,000 monthly tokens", "QR booking and live TV board", "Basic analytics"], link: "/login", label: "Get started free", featured: false },
+  { plan: "Pro", name: "Growing branch", price: "$199", crossedPrice: "$299", period: "/mo", items: ["Unlimited services and tokens", "5 branches included", "Advanced analytics and CSV export", "WhatsApp alerts add-on", "30-day free trial"], link: "/login", label: "Start free trial", featured: true },
+  { plan: "Enterprise", name: "Network rollout", price: "$499", period: "+ Custom", items: ["Unlimited branches", "White-label setup", "API access", "Custom integrations", "Dedicated support"], link: "/login", label: "Contact sales", featured: false },
 ];
 
 const tabContent = [
@@ -311,8 +311,9 @@ export default function Home() {
               <small className="text-ink-3 font-black uppercase">{p.plan}</small>
               <h3 className="font-display text-[1.4rem] font-extrabold mt-3 mb-2">{p.name}</h3>
               <div className="flex items-end gap-1.5 mt-0 mb-[22px] font-black num">
-                <span className="text-[2.4rem]">{p.price}</span>
-                {p.period && <span className="pb-[7px] text-[0.86rem] font-extrabold text-ink-3">{p.period}</span>}
+                {p.crossedPrice && <span className="text-[1.5rem] text-ink-3 line-through opacity-60 pb-[4px]">{p.crossedPrice}</span>}
+                <span className="text-[2.4rem] leading-[1]">{p.price}</span>
+                {p.period && <span className="pb-[4px] text-[0.86rem] font-extrabold text-ink-3">{p.period}</span>}
               </div>
               <ul className="grid gap-[13px] mb-[26px] text-[0.92rem] leading-[1.42]" style={{ color: "#344054" }}>
                 {p.items.map((it) => (
