@@ -339,11 +339,58 @@ export default function Admin() {
                 </div>
                 <div className="font-display text-[1.2rem] font-bold text-ink mb-2">Customer QR code</div>
                 <div className="text-[0.85rem] text-ink-3 leading-relaxed font-medium mb-5 px-2">Print & display at your counter. Customers scan it to join your queue — no app, no signup.</div>
-                <button onClick={() => {
+                <button onClick={async () => {
                   if (!qrUrl) return;
+                  const canvas = document.createElement("canvas");
+                  canvas.width = 400;
+                  canvas.height = 550;
+                  const ctx = canvas.getContext("2d");
+                  if (!ctx) return;
+
+                  // Background
+                  ctx.fillStyle = "#ffffff";
+                  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                  // Border
+                  ctx.strokeStyle = "#e2e8f0";
+                  ctx.lineWidth = 4;
+                  ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+                  // Header
+                  ctx.fillStyle = "#1c0a30";
+                  ctx.font = "bold 26px Inter, sans-serif";
+                  ctx.textAlign = "center";
+                  ctx.fillText(bizName, canvas.width / 2, 60);
+                  
+                  ctx.fillStyle = "#7209b7";
+                  ctx.font = "bold 16px Inter, sans-serif";
+                  ctx.fillText("SCAN TO JOIN QUEUE", canvas.width / 2, 90);
+
+                  // Image
+                  const img = new Image();
+                  img.src = qrUrl;
+                  await new Promise(r => img.onload = r);
+                  ctx.drawImage(img, 50, 110, 300, 300);
+
+                  // Footer
+                  ctx.fillStyle = "#1c0a30";
+                  ctx.font = "bold 16px Inter, sans-serif";
+                  ctx.fillText("No app download required.", canvas.width / 2, 450);
+                  
+                  ctx.fillStyle = "#64748b";
+                  ctx.font = "14px Inter, sans-serif";
+                  ctx.fillText("Wait anywhere and track your", canvas.width / 2, 475);
+                  ctx.fillText("live position on your phone.", canvas.width / 2, 495);
+
+                  // Powered by Waitless (Branding)
+                  ctx.fillStyle = "#94a3b8";
+                  ctx.font = "12px Inter, sans-serif";
+                  ctx.fillText("Powered by Waitless", canvas.width / 2, 530);
+
+                  // Download
                   const a = document.createElement("a");
-                  a.href = qrUrl;
-                  a.download = `waitless-qr.png`;
+                  a.href = canvas.toDataURL("image/png");
+                  a.download = `${bizName.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
                   a.click();
                 }} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Download Print Version</button>
               </div>
