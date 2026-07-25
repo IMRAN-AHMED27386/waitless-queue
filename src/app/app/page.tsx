@@ -12,13 +12,30 @@ import { setupPush, showLocalNotification } from "@/lib/messaging";
 import { countryByCode } from "@/lib/countries";
 
 const categories = ["All", "Hospitals", "Clinics", "Banks", "Government", "Restaurants"];
-// Platform WhatsApp number (digits only, country code included). Empty = feature hidden.
 const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 
 type Step = "discover" | "service" | "details" | "token" | "feedback";
 const STEP_ORDER: Step[] = ["discover", "service", "details", "token", "feedback"];
 type MergedBiz = Biz & { services: (Svc & { waiting: number })[]; totalWaiting: number };
 type Issued = { id: string; businessId: string; serviceId: string; number: string; numericValue: number };
+
+/* ── Inline Styles ── */
+const desktopBg = {
+  background: "linear-gradient(120deg, rgba(14,23,38,.98), rgba(24,36,59,.92)), linear-gradient(90deg, rgba(0,168,135,.2) 1px, transparent 1px), linear-gradient(0deg, rgba(255,255,255,.06) 1px, transparent 1px)",
+  backgroundSize: "auto, 88px 88px, 88px 88px",
+};
+const brandIconBox = {
+  background: "linear-gradient(135deg, #315cff 0%, #315cff 64%, #59d4d1 100%)",
+  boxShadow: "0 8px 20px rgba(49,92,255,.25)",
+};
+const boltIconSm = {
+  display: "block", width: 12, height: 19,
+  background: "linear-gradient(180deg, #ffe066, #ffb22c)",
+  clipPath: "polygon(58% 0, 17% 48%, 45% 48%, 31% 100%, 88% 35%, 57% 35%)",
+  filter: "drop-shadow(0 1px 2px rgba(16,24,40,.2))", transform: "rotate(8deg)",
+};
+const inputStyle = "w-full px-3.5 py-3 rounded-xl border border-border bg-white text-[15px] outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition-all";
+const cardStyle = "text-left bg-white border border-border rounded-2xl p-4 flex items-center gap-4 hover:border-acc hover:-translate-y-px transition shadow-[0_4px_12px_rgba(16,24,40,0.03)] hover:shadow-[0_8px_20px_rgba(49,92,255,0.1)]";
 
 export default function CustomerApp() {
   const [step, setStep] = useState<Step>("discover");
@@ -42,13 +59,11 @@ export default function CustomerApp() {
     return () => { u1(); u2(); };
   }, []);
 
-  // Recovery: QR deep-link /?biz=<id>, token URL /?token=<id>, localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const bizParam = params.get("biz");
     const tokenParam = params.get("token");
     if (tokenParam) {
-      // Direct token URL — resume the token page immediately
       listenToken(tokenParam, (tok) => {
         if (tok && (tok.status === "waiting" || tok.status === "parked")) {
           const saved = { id: tok.id, businessId: tok.businessId, serviceId: tok.serviceId, number: tok.number, numericValue: tok.numericValue };
@@ -59,7 +74,6 @@ export default function CustomerApp() {
       return;
     }
     if (bizParam) { setBizId(bizParam); setStep("service"); return; }
-    // Check localStorage for previously saved token
     try {
       const saved = localStorage.getItem("waitless-active-token");
       if (saved) {
@@ -101,7 +115,6 @@ export default function CustomerApp() {
       const t = await issueToken(bizId, svcId, { name, phone, priority });
       const token = { id: t.id, businessId: bizId, serviceId: svcId, number: t.number, numericValue: t.numericValue };
       setIssued(token);
-      // Save token to localStorage for recovery
       try { localStorage.setItem("waitless-active-token", JSON.stringify(token)); } catch {}
       setStep("token");
       return true;
@@ -127,23 +140,30 @@ export default function CustomerApp() {
   }
 
   return (
-    <main className="flex-1 w-full bg-page flex flex-col items-center sm:py-10 sm:px-4">
-      <div className="w-full max-w-md px-4 pb-10 sm:px-5 sm:pt-2 sm:pb-6 sm:bg-surface sm:rounded-[28px] sm:border sm:border-border sm:shadow-[0_12px_40px_rgba(13,27,62,0.10)]">
-        <header className="flex items-center gap-3 h-14 sticky sm:static top-0 z-20 bg-page sm:bg-surface">
+    <main className="relative flex-1 w-full flex flex-col items-center sm:py-10 sm:px-4 min-h-screen">
+      {/* Desktop ambient backgrounds */}
+      <div className="fixed inset-0 pointer-events-none -z-20 bg-[#f5f8fd] sm:bg-transparent" />
+      <div className="fixed inset-0 pointer-events-none -z-20 hidden sm:block" style={desktopBg} />
+      <div className="fixed inset-0 pointer-events-none -z-10 hidden sm:block opacity-40" style={{ background: "radial-gradient(circle, rgba(49,92,255,0.3) 0%, transparent 70%)" }} />
+      
+      <div className="relative z-10 w-full max-w-md px-4 pb-10 sm:px-6 sm:pt-2 sm:pb-8 sm:bg-white sm:rounded-[32px] sm:shadow-[0_30px_60px_rgba(0,0,0,0.4)] sm:border sm:border-white/20 sm:min-h-[800px]">
+        <header className="flex items-center gap-3 h-16 sticky sm:static top-0 z-20 bg-[#f5f8fd] sm:bg-white border-b sm:border-b-0 border-border/50 sm:mb-2">
           {step === "discover" ? (
-            <Link href="/" className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Home">←</Link>
+            <Link href="/" className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 shadow-sm hover:border-acc transition" aria-label="Home">←</Link>
           ) : (
-            <button onClick={() => setStep(STEP_ORDER[Math.max(0, stepIndex - 1)])} className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Back">←</button>
+            <button onClick={() => setStep(STEP_ORDER[Math.max(0, stepIndex - 1)])} className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 shadow-sm hover:border-acc transition" aria-label="Back">←</button>
           )}
-          <div className="flex items-center gap-2">
-            <span className="grid place-items-center w-8 h-8 rounded-lg text-white text-base" style={{ background: "linear-gradient(135deg,#4361EE,#818CF8)" }}>⚡</span>
-            <span className="font-display text-lg font-bold text-ink">Wait<span className="text-acc">less</span></span>
+          <div className="flex items-center gap-[10px]">
+            <span className="grid place-items-center w-8 h-8 rounded-[8px]" style={brandIconBox}>
+              <span style={{ ...boltIconSm, transform: "scale(0.8) rotate(8deg)" }} />
+            </span>
+            <span className="font-display text-[1.2rem] font-black text-ink tracking-tight">Wait<span className="text-acc">less</span></span>
           </div>
         </header>
 
-        <div className="flex gap-1.5 mb-5">
+        <div className="flex gap-1.5 mb-6 mt-4">
           {STEP_ORDER.map((s, i) => (
-            <span key={s} className="h-1 rounded-full transition-all" style={{ width: i === stepIndex ? 34 : 20, background: i <= stepIndex ? "var(--acc)" : "var(--bd)" }} />
+            <span key={s} className="h-1.5 rounded-full transition-all" style={{ width: i === stepIndex ? 34 : 20, background: i <= stepIndex ? "var(--acc)" : "var(--bd)" }} />
           ))}
         </div>
 
@@ -160,7 +180,18 @@ export default function CustomerApp() {
           if (issued) saveFeedback({ businessId: issued.businessId, serviceId: issued.serviceId, tokenId: issued.id, rating: i, label });
         }} />}
       </div>
-      <p className="hidden sm:block text-xs text-ink-3 mt-4">📱 This is what customers see on their phone</p>
+      <p className="hidden sm:block text-xs text-white/50 mt-4 relative z-10 font-medium tracking-wide">📱 This is what customers see on their phone</p>
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulse-dot {
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6,214,160,0.7); }
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(6,214,160,0); }
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6,214,160,0); }
+        }
+        .live-dot { animation: pulse-dot 2s infinite; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}} />
     </main>
   );
 }
@@ -168,8 +199,8 @@ export default function CustomerApp() {
 function SectionTitle({ t, s }: { t: string; s?: string }) {
   return (
     <div className="mb-4">
-      <h1 className="font-display text-2xl font-bold text-ink">{t}</h1>
-      {s && <p className="text-sm text-ink-3 mt-0.5">{s}</p>}
+      <h1 className="font-display text-[1.6rem] font-bold text-ink leading-tight">{t}</h1>
+      {s && <p className="text-[0.85rem] text-ink-3 mt-1">{s}</p>}
     </div>
   );
 }
@@ -193,17 +224,14 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
 
   return (
     <div>
-      {/* Token recovery by phone */}
-      <div className="bg-surface border border-border rounded-2xl p-4 mb-4" style={{ boxShadow: "var(--sh)" }}>
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-lg">🔍</span>
-          <div className="font-display text-sm font-bold text-ink">Find my token</div>
+      <div className="bg-white border border-border rounded-2xl p-5 mb-6 shadow-[0_8px_20px_rgba(16,24,40,0.04)]">
+        <div className="flex items-center gap-2.5 mb-2">
+          <span className="text-xl">🔍</span>
+          <div className="font-display text-[0.95rem] font-bold text-ink">Find my token</div>
         </div>
-        <p className="text-xs text-ink-3 mb-2">Enter the phone number you used to join a queue</p>
+        <p className="text-[0.8rem] text-ink-3 mb-3">Enter the phone number you used to join a queue</p>
         <input value={recoverPhone} onChange={(e) => setRecoverPhone(e.target.value)}
-          placeholder="Phone (with country code, e.g. +960 7771234)"
-          inputMode="tel"
-          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+          placeholder="Phone (e.g. +960 7771234)" inputMode="tel" className={inputStyle} />
         {recovering && <div className="text-xs text-ink-3 mt-2">Searching…</div>}
         {recoveredTokens.length > 0 && (
           <div className="flex flex-col gap-2 mt-3">
@@ -213,13 +241,13 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
                 try { localStorage.setItem("waitless-active-token", JSON.stringify({ id: t.id, businessId: t.businessId, serviceId: t.serviceId, number: t.number, numericValue: t.numericValue })); } catch {}
                 window.location.href = `/app?token=${t.id}`;
               }}
-              className="text-left bg-surface-2 border border-border rounded-xl p-3 flex items-center gap-3 hover:border-acc transition">
+              className={cardStyle}>
                 <span className="num font-bold text-sm px-2.5 py-1 rounded-lg text-white bg-acc">{t.number}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-ink">{t.bizName ?? "Business"}</div>
                   <div className="text-xs text-ink-3">{t.status === "parked" ? "🅿️ Parked — held for you" : "● Active"}</div>
                 </div>
-                <span className="text-xs font-semibold text-acc">Resume →</span>
+                <span className="text-xs font-bold text-acc">Resume &rsaquo;</span>
               </button>
             ))}
           </div>
@@ -230,37 +258,43 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
       </div>
 
       <SectionTitle t="Find a place" s="Join a queue from your phone" />
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍  Search businesses…" className="w-full px-3.5 py-3 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc mb-3" />
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-1 px-1">
+      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍  Search businesses…" className={`${inputStyle} mb-4`} />
+      
+      <div className="flex gap-2.5 overflow-x-auto pb-2 mb-4 -mx-1 px-1 no-scrollbar">
         {categories.map((c) => (
-          <button key={c} onClick={() => setCat(c)} className="whitespace-nowrap text-[13px] font-semibold px-3.5 py-1.5 rounded-full border transition shrink-0"
-            style={cat === c ? { background: "var(--al)", borderColor: "var(--acc)", color: "var(--acc)" } : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>{c}</button>
+          <button key={c} onClick={() => setCat(c)} 
+            className={`whitespace-nowrap text-[0.8rem] px-4 py-2 rounded-full border transition shrink-0 ${
+              cat === c ? 'font-bold border-acc bg-acc/10 text-acc' : 'font-semibold border-border bg-gray-50 text-ink-3 hover:border-acc hover:text-acc'
+            }`}>
+            {c}
+          </button>
         ))}
       </div>
-      <div className="flex flex-col gap-2.5">
+      
+      <div className="flex flex-col gap-3">
         {!loaded && <div className="text-center text-sm text-ink-3 py-10">Loading businesses…</div>}
         {loaded && list.map((b) => {
           const paused = b.status === "suspended";
           return (
-          <button key={b.id} onClick={() => !paused && onPick(b)} disabled={paused} aria-disabled={paused} className="text-left bg-surface border border-border rounded-2xl p-3.5 flex items-center gap-3 enabled:hover:border-acc transition disabled:opacity-60 disabled:cursor-not-allowed" style={{ boxShadow: "var(--sh)" }}>
-            <span className="grid place-items-center w-12 h-12 rounded-xl text-2xl shrink-0 bg-surface-2">{b.logo}</span>
+          <button key={b.id} onClick={() => !paused && onPick(b)} disabled={paused} aria-disabled={paused} className={`${cardStyle} ${paused ? 'opacity-60 cursor-not-allowed hover:-translate-y-0 hover:shadow-none' : ''}`}>
+            <span className="grid place-items-center w-[52px] h-[52px] rounded-xl text-3xl shrink-0 bg-gray-50 border border-border/50">{b.logo}</span>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <div className="font-display font-bold text-ink truncate">{b.name}</div>
+              <div className="flex items-center gap-2 mb-0.5">
+                <div className="font-display font-bold text-[1.05rem] text-ink truncate">{b.name}</div>
                 {paused && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>Paused</span>}
               </div>
-              <div className="text-xs text-ink-3 truncate">{b.categoryIcon} {b.category} · {b.country ? `${countryByCode(b.country)?.flag ?? ""} ` : ""}{b.location}</div>
+              <div className="text-[0.75rem] text-ink-3 truncate mb-1">{b.categoryIcon} {b.category} &middot; {b.country ? `${countryByCode(b.country)?.flag ?? ""} ` : ""}{b.location}</div>
               {paused ? (
-                <div className="mt-1.5 text-xs text-ink-3">Not accepting tokens right now</div>
+                <div className="text-[0.75rem] text-ink-3 mt-1">Not accepting tokens right now</div>
               ) : (
-                <div className="flex items-center gap-3 mt-1.5 text-xs">
-                  <span className="num font-semibold" style={{ color: "var(--acc)" }}>👥 {b.totalWaiting} waiting</span>
-                  <span className="num text-ink-3">👍 {b.likes}</span>
-                  <span className="num text-ink-3">📍 {b.distanceKm} km</span>
+                <div className="flex items-center gap-3 text-[0.75rem] mt-1">
+                  <span className="font-bold text-acc">👥 {b.totalWaiting} waiting</span>
+                  <span className="text-ink-3">👍 {b.likes}</span>
+                  <span className="text-ink-3">📍 {b.distanceKm} km</span>
                 </div>
               )}
             </div>
-            <span className="text-ink-3">›</span>
+            <span className="text-ink-3 text-lg font-bold text-acc">&rsaquo;</span>
           </button>
           );
         })}
@@ -274,34 +308,34 @@ function ServicePick({ biz, onPick }: { biz: MergedBiz; onPick: (s: Svc & { wait
   const paused = biz.status === "suspended";
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4">
-        <span className="grid place-items-center w-12 h-12 rounded-xl text-2xl shrink-0 bg-surface-2 border border-border">{biz.logo}</span>
+      <div className="flex items-center gap-4 mb-6 mt-2">
+        <span className="grid place-items-center w-[60px] h-[60px] rounded-2xl text-3xl shrink-0 bg-gray-50 border border-border/50 shadow-sm">{biz.logo}</span>
         <div>
-<h1 className="font-display text-xl font-bold text-ink">{biz.name}</h1>
-            <div className="text-xs text-ink-3">{biz.categoryIcon} {biz.category} · {biz.country ? `${countryByCode(biz.country)?.flag ?? ""} ` : ""}{biz.location}</div>
+          <h1 className="font-display text-[1.4rem] font-bold text-ink leading-tight">{biz.name}</h1>
+          <div className="text-[0.8rem] text-ink-3 mt-0.5">{biz.categoryIcon} {biz.category} &middot; {biz.country ? `${countryByCode(biz.country)?.flag ?? ""} ` : ""}{biz.location}</div>
         </div>
       </div>
       {paused ? (
         <div className="text-center py-12">
-          <div className="text-5xl mb-3">⏸️</div>
-          <h2 className="font-display text-lg font-bold text-ink mb-1">Not accepting tokens right now</h2>
-          <p className="text-sm text-ink-3 px-4">{biz.name} has paused its online queue. Please check back later or contact them directly.</p>
+          <div className="text-5xl mb-4">⏸️</div>
+          <h2 className="font-display text-xl font-bold text-ink mb-1.5">Not accepting tokens right now</h2>
+          <p className="text-[0.85rem] text-ink-3 px-4">{biz.name} has paused its online queue. Please check back later or contact them directly.</p>
         </div>
       ) : (
       <>
-      <p className="text-sm font-semibold text-ink-2 mb-3">Please choose a service</p>
-      <div className="flex flex-col gap-2.5">
+      <p className="text-[0.85rem] font-bold text-ink-2 mb-3">Please choose a service</p>
+      <div className="flex flex-col gap-3">
         {biz.services.map((s) => (
-          <button key={s.id} onClick={() => onPick(s)} className="text-left bg-surface border border-border rounded-2xl p-3.5 flex items-center gap-3 hover:border-acc transition" style={{ boxShadow: "var(--sh)" }}>
-            <span className="grid place-items-center w-11 h-11 rounded-xl text-xl shrink-0 bg-surface-2">{s.icon}</span>
-            <div className="flex-1">
-              <div className="font-display font-bold text-ink">{s.name}</div>
-              <div className="text-xs text-ink-3 mt-0.5">
-                {s.waiting === 0 ? "No wait — walk right in" : `👥 ${s.waiting} waiting · ~${Math.round(s.waiting * paceOf(s) + (s.delayMins ?? 0))} min`}
-                {(s.delayMins ?? 0) > 0 && <span className="font-semibold" style={{ color: "var(--wn)" }}> · ⏳ {s.delayMins} min delay</span>}
+          <button key={s.id} onClick={() => onPick(s)} className={cardStyle}>
+            <span className="grid place-items-center w-[52px] h-[52px] rounded-xl text-2xl shrink-0 bg-gray-50 border border-border/50">{s.icon}</span>
+            <div className="flex-1 text-left">
+              <div className="font-display font-bold text-[1.05rem] text-ink">{s.name}</div>
+              <div className="text-[0.75rem] text-ink-3 mt-1">
+                {s.waiting === 0 ? "No wait — walk right in" : <><span className="font-bold text-acc">👥 {s.waiting} waiting</span> &middot; ~{Math.round(s.waiting * paceOf(s) + (s.delayMins ?? 0))} min</>}
+                {(s.delayMins ?? 0) > 0 && <span className="font-bold" style={{ color: "var(--wn)" }}> &middot; ⏳ {s.delayMins} min delay</span>}
               </div>
             </div>
-            <span className="text-ink-3">›</span>
+            <span className="text-ink-3 text-lg font-bold text-acc">&rsaquo;</span>
           </button>
         ))}
       </div>
@@ -319,31 +353,33 @@ function Details({ biz, svc, name, setName, phone, setPhone, priority, setPriori
   return (
     <div>
       <SectionTitle t="Your details" s={`${svc.icon} ${svc.name} · ${biz.name}`} />
-      <div className="bg-surface border border-border rounded-2xl p-4 flex flex-col gap-3" style={{ boxShadow: "var(--sh)" }}>
+      <div className="bg-white border border-border rounded-2xl p-5 flex flex-col gap-4 shadow-[0_8px_20px_rgba(16,24,40,0.04)] mb-2">
         <label className="block">
-          <span className="text-[13px] font-semibold text-ink-2">Full name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+          <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Full name</span>
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className={inputStyle} />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-ink-2">Phone number</span>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (with country code)" inputMode="tel" className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc" />
+          <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Phone number</span>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone (with country code)" inputMode="tel" className={inputStyle} />
         </label>
         <label className="block">
-          <span className="text-[13px] font-semibold text-ink-2">Priority</span>
-          <select value={priority} onChange={(e) => setPriority(e.target.value)} className="mt-1.5 w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-[15px] outline-none focus:border-acc">
+          <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Priority</span>
+          <select value={priority} onChange={(e) => setPriority(e.target.value)} className={inputStyle}>
             <option>Regular</option><option>Senior / Disability</option><option>Pregnant</option>
           </select>
         </label>
       </div>
       {errorMsg && (
-        <div className="mt-3 px-3.5 py-2.5 rounded-xl text-[13px] font-semibold" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)", color: "var(--dng)" }}>
+        <div className="mt-3 px-4 py-3 rounded-xl text-[0.85rem] font-bold" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)", color: "var(--dng)" }}>
           {errorMsg}
         </div>
       )}
-      <button onClick={async () => { setBusy(true); const ok = await onSubmit(); if (!ok) setBusy(false); }} disabled={!valid || busy} className="w-full mt-4 py-3 rounded-xl font-semibold text-white transition disabled:opacity-50 bg-acc hover:bg-acc-dark">
+      <button onClick={async () => { setBusy(true); const ok = await onSubmit(); if (!ok) setBusy(false); }} disabled={!valid || busy} 
+        className="w-full mt-4 py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
+        style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
         {busy ? "Getting your token…" : "Get my token ✦"}
       </button>
-      <p className="text-center text-xs text-ink-3 mt-2">No app install needed · You can cancel anytime</p>
+      <p className="text-center text-[0.75rem] text-ink-3 mt-3">No app install needed &middot; You can cancel anytime</p>
     </div>
   );
 }
@@ -357,23 +393,18 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   useEffect(() => listenToken(issued.id, setTok), [issued.id]);
   useEffect(() => { setupPush(issued.id); }, [issued.id]);
 
-  // The token doc is the source of truth — a staff transfer moves it to a new
-  // service and number, and this page follows along live.
   const curSvcId = tok?.serviceId ?? issued.serviceId;
   const number = tok?.number ?? issued.number;
   const numeric = tok?.numericValue ?? issued.numericValue;
   const journey = tok?.journey ?? [];
   const svc = biz.services.find((s) => s.id === curSvcId);
 
-  // New stage (a transfer) → alerts start fresh for the new queue.
   useEffect(() => { alertStageRef.current = 0; prevServingRef.current = null; }, [curSvcId]);
 
   const serving = svc?.currentServing ?? 0;
   const headsUp = biz.alertHeadsUp ?? ALERT_HEADS_UP_DEFAULT;
   const comeNow = biz.alertComeNow ?? ALERT_COME_NOW_DEFAULT;
-  // Position-based alerts (tab open): heads-up → come-now → your turn, each once.
-  // Jumps from no-shows are handled — a leap past a threshold still fires the most
-  // relevant alert, flagged as "sped up".
+  
   useEffect(() => {
     const away = numeric - serving;
     const jump = prevServingRef.current == null ? 1 : Math.max(1, serving - prevServingRef.current);
@@ -419,130 +450,131 @@ function TokenView({ biz, issued, onCancel, onDone }: {
   return (
     <div>
       {journey.length > 0 && (
-        <div className="flex flex-col gap-1.5 mb-3">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-ink-3">Your visit · stage {journey.length + 1}</div>
+        <div className="flex flex-col gap-1.5 mb-4">
+          <div className="text-[0.7rem] font-bold uppercase tracking-wider text-ink-3 mb-1">Your visit &middot; stage {journey.length + 1}</div>
           {journey.map((st, i) => (
-            <div key={i} className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl border border-border bg-surface">
+            <div key={i} className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border bg-gray-50">
               <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] font-bold text-white shrink-0" style={{ background: "#06D6A0" }}>✓</span>
-              <span className="text-[13px] font-semibold text-ink-2 flex-1 truncate">{st.serviceName}</span>
-              <span className="num text-xs text-ink-3">{st.number}</span>
+              <span className="text-[0.85rem] font-semibold text-ink-2 flex-1 truncate">{st.serviceName}</span>
+              <span className="num text-[0.8rem] text-ink-3 font-bold">{st.number}</span>
             </div>
           ))}
-          <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl" style={{ background: "var(--al)", border: "1px solid var(--acc)" }}>
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-acc/10 border border-acc/30">
             <span className="grid place-items-center w-6 h-6 rounded-full text-[12px] font-bold text-white bg-acc shrink-0">{journey.length + 1}</span>
-            <span className="text-[13px] font-semibold flex-1 truncate" style={{ color: "var(--acc)" }}>{svc.name} — current</span>
-            <span className="num text-xs font-semibold" style={{ color: "var(--acc)" }}>{number}</span>
+            <span className="text-[0.85rem] font-bold flex-1 truncate text-acc">{svc.name} — current</span>
+            <span className="num text-[0.8rem] font-bold text-acc">{number}</span>
           </div>
         </div>
       )}
 
       {parked && (
-        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(247,127,0,.12)", border: "1px solid var(--wn)" }}>
-          <span className="text-lg">🅿️</span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4" style={{ background: "rgba(247,127,0,.12)", border: "1px solid var(--wn)" }}>
+          <span className="text-xl">🅿️</span>
           <div className="flex-1">
-            <div className="text-[13px] font-bold" style={{ color: "var(--wn)" }}>We&apos;re holding your spot</div>
-            <div className="text-[11.5px] text-ink-3">You were called — please come to the counter now. Your place is kept for a few minutes.</div>
+            <div className="text-[0.85rem] font-bold" style={{ color: "var(--wn)" }}>We&apos;re holding your spot</div>
+            <div className="text-[0.75rem] mt-0.5 text-ink-3 font-medium">You were called — please come to the counter now. Your place is kept for a few minutes.</div>
           </div>
         </div>
       )}
       {expired && (
-        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)" }}>
-          <span className="text-lg">⌛</span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4" style={{ background: "rgba(239,35,60,.08)", border: "1px solid var(--dng)" }}>
+          <span className="text-xl">⌛</span>
           <div className="flex-1">
-            <div className="text-[13px] font-bold" style={{ color: "var(--dng)" }}>Token released</div>
-            <div className="text-[11.5px] text-ink-3">You didn&apos;t reach the counter in time. Please take a new token to rejoin the queue.</div>
+            <div className="text-[0.85rem] font-bold" style={{ color: "var(--dng)" }}>Token released</div>
+            <div className="text-[0.75rem] mt-0.5 text-ink-3 font-medium">You didn&apos;t reach the counter in time. Please take a new token to rejoin the queue.</div>
           </div>
         </div>
       )}
-
       {delay > 0 && (
-        <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl mb-3" style={{ background: "rgba(247,127,0,.1)", border: "1px solid var(--wn)" }}>
-          <span className="text-lg">⏳</span>
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl mb-4" style={{ background: "rgba(247,127,0,.1)", border: "1px solid var(--wn)" }}>
+          <span className="text-xl">⏳</span>
           <div className="flex-1">
-            <div className="text-[13px] font-bold" style={{ color: "var(--wn)" }}>Running about {delay} min behind</div>
-            <div className="text-[11.5px] text-ink-3">{biz.name} announced this{delayTime ? ` at ${delayTime}` : ""} — your estimate below already includes it.</div>
+            <div className="text-[0.85rem] font-bold" style={{ color: "var(--wn)" }}>Running about {delay} min behind</div>
+            <div className="text-[0.75rem] mt-0.5 text-ink-3 font-medium">{biz.name} announced this{delayTime ? ` at ${delayTime}` : ""} — your estimate below already includes it.</div>
           </div>
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-[18px] p-5 text-white" style={{ background: "linear-gradient(135deg,#0D1B3E 0%,#1A2F70 100%)" }}>
-        <div className="text-[12.5px]" style={{ color: "rgba(255,255,255,.55)" }}>{svc.name} · {biz.name}</div>
-        <div className="num font-bold text-[56px] leading-none tracking-tight mt-1">{number}</div>
-        <span className="inline-block mt-2 text-[11.5px] font-semibold px-2.5 py-1 rounded-full"
-          style={parked ? { background: "rgba(247,127,0,.2)", color: "#FDB44B" } : yourTurn ? { background: "rgba(6,214,160,.16)", color: "#06D6A0" } : { background: "rgba(255,255,255,.12)", color: "rgba(255,255,255,.8)" }}>
-          {cancelled ? "● Cancelled" : expired ? "● Token released" : parked ? "● Held — please come now" : yourTurn ? "● Your turn — proceed!" : "● Waiting"}
+      {/* Live Ticket */}
+      <div className="relative overflow-hidden rounded-[24px] p-6 text-white shadow-[0_20px_40px_rgba(13,27,62,0.4)]" style={{ background: "linear-gradient(135deg, #0D1B3E 0%, #1A2F70 100%)" }}>
+        <div className="text-[0.8rem] font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>{svc.name} &middot; {biz.name}</div>
+        <div className="font-display font-black text-[4.5rem] leading-[1.1] tracking-tight mt-1 mb-2">{number}</div>
+        
+        <span className="inline-flex items-center gap-2 mt-1 text-[0.75rem] font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)" }}>
+          <span className={`w-2 h-2 rounded-full ${parked ? "bg-[#FDB44B]" : yourTurn ? "bg-[#06D6A0]" : cancelled ? "bg-red-500" : "bg-[#06D6A0] live-dot"}`}></span>
+          {cancelled ? "Cancelled" : expired ? "Token released" : parked ? "Held — please come now" : yourTurn ? "Your turn — proceed!" : "Waiting"}
         </span>
-        <div className="grid grid-cols-3 gap-2 mt-5">
+
+        <div className="grid grid-cols-3 gap-3 mt-6">
           {[
             { l: "Ahead", v: ahead, u: "people" },
             { l: "Est. wait", v: estWait, u: livePace ? "min · live pace" : "minutes" },
-            { l: "Serving", v: `${svc.prefix}-${serving}`, u: "now" },
+            { l: "Serving", v: `${svc.prefix}-${serving}`, u: "now", h: true },
           ].map((m) => (
             <div key={m.l}>
-              <div className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,.4)" }}>{m.l}</div>
-              <div className="num text-[19px] font-bold mt-0.5">{m.v}</div>
-              <div className="text-[11px]" style={{ color: "rgba(255,255,255,.45)" }}>{m.u}</div>
+              <div className="text-[0.65rem] uppercase tracking-wider font-bold" style={{ color: "rgba(255,255,255,0.5)" }}>{m.l}</div>
+              <div className={`num text-[1.3rem] font-bold mt-1 ${m.h ? "text-[#06d6a0]" : ""}`}>{m.v}</div>
+              <div className="text-[0.7rem]" style={{ color: "rgba(255,255,255,0.5)" }}>{m.u}</div>
             </div>
           ))}
         </div>
-        <div className="mt-4">
-          <div className="flex justify-between text-[11px] mb-1.5" style={{ color: "rgba(255,255,255,.5)" }}>
+        
+        <div className="mt-6">
+          <div className="flex justify-between text-[0.7rem] font-bold mb-2" style={{ color: "rgba(255,255,255,0.6)" }}>
             <span>Queue position</span><span className="num">{ahead + 1} of {Math.max(1, total - serving)}</span>
           </div>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,.15)" }}>
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: "#06D6A0" }} />
+          <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.15)" }}>
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: "#06D6A0", boxShadow: "0 0 10px rgba(6,214,160,0.5)" }} />
           </div>
         </div>
       </div>
 
-      {/* WhatsApp alerts opt-in: patient messages first, so replies ride Meta's
-          free 24h window. Shown only when the business has the add-on enabled. */}
       {biz.waEnabled && WA_NUMBER && tok?.waCode && !cancelled && !expired && (
         tok?.waTo ? (
-          <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl mt-3 text-[13px] font-semibold" style={{ background: "rgba(37,211,102,.1)", border: "1px solid #25D366", color: "#128C4B" }}>
+          <div className="flex items-center gap-2 px-4 py-3 rounded-xl mt-4 text-[0.85rem] font-bold" style={{ background: "rgba(37,211,102,.1)", border: "1px solid #25D366", color: "#128C4B" }}>
             ✅ WhatsApp alerts on — we&apos;ll message you as your turn nears.
           </div>
         ) : (
           <a href={`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(`TRACK ${tok.waCode} — token ${number}`)}`} target="_blank" rel="noreferrer"
-            className="flex items-center justify-center gap-2 py-3 rounded-xl mt-3 font-semibold text-white" style={{ background: "#25D366" }}>
+            className="flex items-center justify-center gap-2 py-3 rounded-xl mt-4 text-[0.9rem] font-bold text-white hover:-translate-y-px transition-transform" style={{ background: "#25D366", boxShadow: "0 8px 20px rgba(37,211,102,0.25)" }}>
             🟢 Get alerts on WhatsApp
           </a>
         )
       )}
 
-      <div className="bg-surface border border-border rounded-2xl p-4 mt-3" style={{ boxShadow: "var(--sh)" }}>
-        <div className="font-display font-bold text-ink mb-3 flex items-center gap-2">Queue status <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(6,214,160,.12)", color: "#06D6A0" }}>● Live</span></div>
+      <div className="bg-white border border-border rounded-2xl p-4 mt-4 shadow-[0_4px_12px_rgba(16,24,40,0.03)]">
+        <div className="font-display font-bold text-ink mb-3 flex items-center gap-2">Queue status <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "rgba(6,214,160,.12)", color: "#06D6A0" }}>● Live</span></div>
         <div className="flex flex-col gap-1.5">
           {rows.map((q, i) => (
-            <div key={i} className="flex justify-between items-center px-3 py-2 rounded-xl"
-              style={q.kind === "serving" ? { background: "rgba(6,214,160,.12)", border: "1px solid #06D6A0" } : q.kind === "mine" ? { background: "var(--al)", border: "2px solid var(--acc)" } : { background: "var(--s2)", border: "1px solid var(--bd)" }}>
-              <span className="num font-bold text-[13px]" style={{ color: q.kind === "serving" ? "#06D6A0" : q.kind === "mine" ? "var(--acc)" : "var(--t1)" }}>{q.num}{q.kind === "mine" ? " — You!" : ""}</span>
-              <span className="text-xs font-medium" style={{ color: q.kind === "mine" ? "var(--acc)" : "var(--t3)" }}>{q.label}</span>
+            <div key={i} className="flex justify-between items-center px-4 py-2.5 rounded-xl border"
+              style={q.kind === "serving" ? { background: "rgba(6,214,160,.08)", borderColor: "#06D6A0" } : q.kind === "mine" ? { background: "rgba(49,92,255,0.05)", borderColor: "rgba(49,92,255,0.5)" } : { background: "#f8fafc", borderColor: "#e2e8f0" }}>
+              <span className="num font-bold text-[0.85rem]" style={{ color: q.kind === "serving" ? "#06D6A0" : q.kind === "mine" ? "var(--acc)" : "var(--t1)" }}>{q.num}{q.kind === "mine" ? " — You!" : ""}</span>
+              <span className="text-[0.75rem] font-bold" style={{ color: q.kind === "mine" ? "var(--acc)" : "var(--t3)" }}>{q.label}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => {
-            const url = `${window.location.origin}/app?token=${issued.id}`;
-            try { navigator.clipboard.writeText(url); } catch {}
-          }}
-          className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border border-border text-ink-2 bg-surface hover:bg-surface-2 transition">
-            📋 Copy my token link
-          </button>
-          <button onClick={() => {
-            const url = `${window.location.origin}/app?token=${issued.id}`;
-            try { navigator.clipboard.writeText(url); } catch {}
-          }} className="flex items-center justify-center gap-1 py-2.5 px-3 rounded-xl text-[13px] font-semibold border border-border text-ink-2 bg-surface hover:bg-surface-2 transition">
-            🔗
-          </button>
-        </div>
-      <div className="grid grid-cols-2 gap-2.5 mt-3">
-        <button onClick={onCancel} className="py-3 rounded-xl font-semibold text-white" style={{ background: "var(--dng)" }}>Cancel token</button>
-        <button onClick={onDone} className="py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">I&apos;m done →</button>
+      <div className="flex items-center gap-2 mb-2 mt-4">
+        <button onClick={() => {
+          const url = `${window.location.origin}/app?token=${issued.id}`;
+          try { navigator.clipboard.writeText(url); } catch {}
+        }}
+        className="flex-1 py-3 rounded-xl text-[0.85rem] font-bold border border-border text-ink-2 bg-white hover:border-acc hover:text-acc transition shadow-sm">
+          📋 Copy my token link
+        </button>
+        <button onClick={() => {
+          const url = `${window.location.origin}/app?token=${issued.id}`;
+          try { navigator.clipboard.writeText(url); } catch {}
+        }} className="flex items-center justify-center py-3 px-4 rounded-xl text-[1rem] border border-border text-ink-2 bg-white hover:border-acc transition shadow-sm">
+          🔗
+        </button>
       </div>
-      <p className="text-center text-xs text-ink-3 mt-2">📲 You'll be alerted as your turn nears · Copy the link above to come back anytime</p>
+      <div className="grid grid-cols-2 gap-2 mt-3">
+        <button onClick={onCancel} className="py-3 rounded-xl text-[0.9rem] font-bold text-white hover:opacity-90 transition" style={{ background: "var(--dng)" }}>Cancel token</button>
+        <button onClick={onDone} className="py-3 rounded-xl text-[0.9rem] font-bold text-white hover:opacity-90 transition" style={{ background: "#0e1726" }}>I&apos;m done &rsaquo;</button>
+      </div>
+      <p className="text-center text-[0.75rem] text-ink-3 mt-3 px-4 font-medium">📲 You'll be alerted as your turn nears &middot; Copy the link above to come back anytime</p>
     </div>
   );
 }
@@ -553,22 +585,22 @@ function Feedback({ rating, onRate, onDone }: { rating: number | null; onRate: (
   ];
   if (rating !== null) {
     return (
-      <div className="text-center py-16">
-        <div className="text-5xl mb-3">🎉</div>
-        <h1 className="font-display text-2xl font-bold text-ink mb-1">Thank you!</h1>
-        <p className="text-sm text-ink-3 mb-6">Your feedback helps businesses serve you better.</p>
-        <button onClick={onDone} className="px-6 py-3 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">Back to home</button>
+      <div className="text-center py-20 px-4">
+        <div className="text-6xl mb-4">🎉</div>
+        <h1 className="font-display text-2xl font-bold text-ink mb-2">Thank you!</h1>
+        <p className="text-[0.9rem] text-ink-3 mb-8">Your feedback helps businesses serve you better.</p>
+        <button onClick={onDone} className="px-8 py-3.5 rounded-xl text-[0.95rem] font-bold text-white bg-acc hover:-translate-y-px transition" style={{ boxShadow: "0 10px 24px rgba(49,92,255,.25)" }}>Back to home</button>
       </div>
     );
   }
   return (
     <div>
       <SectionTitle t="How was your visit?" s="We appreciate your feedback" />
-      <p className="text-sm font-semibold text-ink mb-3">How would you rate the friendliness and service?</p>
-      <div className="flex flex-col gap-2">
+      <p className="text-[0.85rem] font-bold text-ink mb-4 mt-2">How would you rate the friendliness and service?</p>
+      <div className="flex flex-col gap-2.5">
         {faces.map((f, i) => (
-          <button key={f.l} onClick={() => onRate(i, f.l)} className="flex items-center gap-3 px-4 py-3 rounded-xl border border-border bg-surface hover:border-acc transition text-left">
-            <span className="text-2xl">{f.e}</span><span className="font-semibold text-ink">{f.l}</span>
+          <button key={f.l} onClick={() => onRate(i, f.l)} className="flex items-center gap-4 px-5 py-3.5 rounded-2xl border border-border bg-white hover:border-acc hover:shadow-md hover:-translate-y-px transition text-left">
+            <span className="text-3xl">{f.e}</span><span className="font-bold text-ink text-[1.05rem]">{f.l}</span>
           </button>
         ))}
       </div>
