@@ -339,7 +339,13 @@ export default function Admin() {
                 </div>
                 <div className="font-display text-[1.2rem] font-bold text-ink mb-2">Customer QR code</div>
                 <div className="text-[0.85rem] text-ink-3 leading-relaxed font-medium mb-5 px-2">Print & display at your counter. Customers scan it to join your queue — no app, no signup.</div>
-                <button className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Download Print Version</button>
+                <button onClick={() => {
+                  if (!qrUrl) return;
+                  const a = document.createElement("a");
+                  a.href = qrUrl;
+                  a.download = `waitless-qr.png`;
+                  a.click();
+                }} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Download Print Version</button>
               </div>
 
               {/* TIMING CARD */}
