@@ -385,7 +385,7 @@ export default function Admin() {
                   // Powered by Waitless (Branding)
                   ctx.fillStyle = "#94a3b8";
                   ctx.font = "12px Inter, sans-serif";
-                  ctx.fillText("Powered by Waitless", canvas.width / 2, 530);
+                  ctx.fillText("Powered by ⚡ Waitless", canvas.width / 2, 530);
 
                   // Download
                   const a = document.createElement("a");
