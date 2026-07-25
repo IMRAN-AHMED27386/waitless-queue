@@ -2,9 +2,9 @@
 
 /* ── Waitless design tokens ── */
 :root {
-  --acc: #4361ee;
-  --acc-dark: #3050de;
-  --al: #eef1ff;
+  --acc: #315cff;
+  --acc-dark: #2040e6;
+  --al: rgba(49, 92, 255, 0.1);
   --lv: #06d6a0;
   --lvb: rgba(6, 214, 160, 0.12);
   --wn: #f77f00;
@@ -13,15 +13,15 @@
   --dngb: rgba(239, 35, 60, 0.12);
   --pur: #7209b7;
   --purb: rgba(114, 9, 183, 0.1);
-  --sbg: #0d1b3e;
-  --t1: #0d1b3e;
-  --t2: #4a5578;
-  --t3: #94a3b8;
-  --bd: #dde3f4;
+  --sbg: #0a1128;
+  --t1: #0a1128;
+  --t2: #334155;
+  --t3: #64748b;
+  --bd: #e2e8f0;
   --sf: #ffffff;
-  --s2: #f8faff;
-  --bg: #eef2ff;
-  --sh: 0 2px 8px rgba(13, 27, 62, 0.06), 0 1px 2px rgba(13, 27, 62, 0.04);
+  --s2: #f8fafc;
+  --bg: #f0f4f8;
+  --sh: 0 12px 30px rgba(10, 17, 40, 0.05), 0 4px 6px rgba(10, 17, 40, 0.02);
 }
 
 @theme inline {
