@@ -167,7 +167,7 @@ export default function CustomerApp() {
           ))}
         </div>
 
-        {step === "discover" && <Discover list={list} loaded={loaded} cat={cat} setCat={setCat} query={query} setQuery={setQuery} onPick={(b) => { setBizId(b.id); setStep("service"); }} />}
+        {step === "discover" && <Discover list={list} loaded={loaded} cat={cat} setCat={setCat} query={query} setQuery={setQuery} onPick={(b) => { setBizId(b.id); setStep("service"); }} dbCategories={dbCategories} />}
         {step === "service" && biz && <ServicePick biz={biz} onPick={(s) => { setSvcId(s.id); setStep("details"); }} />}
         {step === "details" && biz && svc && (
           <Details biz={biz} svc={svc} name={name} setName={setName} phone={phone} setPhone={setPhone} priority={priority} setPriority={setPriority} onSubmit={generate} errorMsg={issueError} />
@@ -205,8 +205,8 @@ function SectionTitle({ t, s }: { t: string; s?: string }) {
   );
 }
 
-function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
-  list: MergedBiz[]; loaded: boolean; cat: string; setCat: (c: string) => void; query: string; setQuery: (q: string) => void; onPick: (b: MergedBiz) => void;
+function Discover({ list, loaded, cat, setCat, query, setQuery, onPick, dbCategories }: {
+  list: MergedBiz[]; loaded: boolean; cat: string; setCat: (c: string) => void; query: string; setQuery: (q: string) => void; onPick: (b: MergedBiz) => void; dbCategories: Category[];
 }) {
   const [recoverPhone, setRecoverPhone] = useState("");
   const [recoveredTokens, setRecoveredTokens] = useState<(Tok & { bizName?: string })[]>([]);
