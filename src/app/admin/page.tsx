@@ -8,9 +8,11 @@ import {
   addBranch, updateBranch, removeBranch, addService, updateService, removeService, updateBusiness,
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
+  listenStaff, addStaffUserRecord, removeStaffUserRecord,
   type Branch, type HistTok, type Svc, type Biz,
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
+import { createStaffAuthAccount } from "@/lib/auth-secondary";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import QRCode from "qrcode";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -64,6 +66,9 @@ export default function Admin() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [tokens, setTokens] = useState<HistTok[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
+  const [staff, setStaff] = useState<any[]>([]);
+  const [staffModal, setStaffModal] = useState(false);
+  const [staffForm, setStaffForm] = useState({ name: "", email: "", pass: "" });
 
   useEffect(() => {
     if (!bizId) return;
@@ -84,7 +89,8 @@ export default function Admin() {
     const u1 = listenBranches(bizId, setBranches);
     const u2 = listenBusinessTokens(bizId, setTokens);
     const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId)));
-    return () => { u1(); u2(); u3(); };
+    const u4 = listenStaff(bizId, setStaff);
+    return () => { u1(); u2(); u3(); u4(); };
   }, [bizId]);
 
   const planNow = effectivePlan(bizDoc);
@@ -133,12 +139,27 @@ export default function Admin() {
     setSvcForm({ name: "", icon: "🩺", prefix: "A", avgMins: 5 }); setSvcModal({ mode: "new" });
   }
   function openEditSvc(s: Svc) { setSvcForm({ name: s.name, icon: s.icon, prefix: s.prefix, avgMins: s.avgMins }); setSvcModal({ mode: "edit", id: s.id }); }
-  async function saveService() {
-    if (!svcForm.name.trim()) return;
-    const data = { name: svcForm.name.trim(), icon: svcForm.icon || "🩺", prefix: svcForm.prefix.toUpperCase().slice(0, 2) || "A", avgMins: Number(svcForm.avgMins) };
+  async function saveSvc(e: React.FormEvent) {
+    e.preventDefault();
+    if (!svcForm.name.trim()) return setToast("Service name required");
+    const data = { ...svcForm, avgMins: Number(svcForm.avgMins) };
     if (svcModal?.mode === "new") { await addService(bizId, data); flash("Service added"); }
     else if (svcModal?.mode === "edit") { await updateService(bizId, svcModal.id, data); flash("Service updated"); }
     setSvcModal(null);
+  }
+
+  async function saveStaff(e: React.FormEvent) {
+    e.preventDefault();
+    if (!staffForm.name.trim() || !staffForm.email.trim() || !staffForm.pass.trim()) return setToast("All fields required");
+    setToast("Creating account...");
+    try {
+      const uid = await createStaffAuthAccount(staffForm.email, staffForm.pass);
+      await addStaffUserRecord(uid, { email: staffForm.email, name: staffForm.name, businessId: bizId });
+      flash("Staff account created");
+      setStaffModal(false);
+    } catch (err: any) {
+      setToast(err.message || "Error creating staff account");
+    }
   }
 
   async function saveAlerts() {
@@ -327,6 +348,31 @@ export default function Admin() {
                 </div>
               </section>
 
+              {/* STAFF */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Staff Accounts</h2>
+                  <button onClick={() => { setStaffForm({ name: "", email: "", pass: "" }); setStaffModal(true); }} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Staff</button>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {staff.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-6 text-center border border-dashed border-border rounded-[20px]">No staff accounts created.</div>}
+                  {staff.map((st) => (
+                    <div key={st.id} className="flex items-center justify-between bg-white border border-border rounded-[20px] p-4 shadow-sm hover:border-acc/30 transition-all">
+                      <div>
+                        <div className="font-display font-bold text-[1.1rem] text-ink">{st.name}</div>
+                        <div className="text-[0.85rem] text-ink-3 font-medium">{st.email}</div>
+                      </div>
+                      <button onClick={async () => {
+                        if (confirm(`Remove ${st.name}?`)) {
+                          await removeStaffUserRecord(st.id);
+                          flash("Staff removed");
+                        }
+                      }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
             </div>
 
             {/* RIGHT COL (Settings & QR) */}
@@ -490,24 +536,36 @@ export default function Admin() {
 
       {svcModal && (
         <Modal title={svcModal.mode === "new" ? "New service" : "Edit service"} onClose={() => setSvcModal(null)}>
-          <Field label="Service name"><input className={inputCls} value={svcForm.name} onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value })} placeholder="e.g. General Doctor" /></Field>
-          <div className="grid grid-cols-3 gap-4">
-            <Field label="Icon"><input className={inputCls} value={svcForm.icon} onChange={(e) => setSvcForm({ ...svcForm, icon: e.target.value })} placeholder="🩺" /></Field>
-            <Field label="Prefix"><input className={inputCls} value={svcForm.prefix} onChange={(e) => setSvcForm({ ...svcForm, prefix: e.target.value })} placeholder="A" maxLength={2} /></Field>
-            <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} /></Field>
-          </div>
-          <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
-          {svcModal.mode === "edit" && (
-            <button onClick={async () => {
-              if (confirm("Are you sure you want to delete this service?")) {
-                await removeService(bizId!, svcModal.id);
-                setSvcModal(null);
-                flash("Service deleted");
-              }
-            }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Service</button>
-          )}
+          <form onSubmit={saveSvc} className="flex flex-col gap-4 mt-2">
+            <Field label="Service name"><input className={inputCls} value={svcForm.name} onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value })} placeholder="e.g. General Doctor" required /></Field>
+            <div className="grid grid-cols-3 gap-4">
+              <Field label="Icon"><input className={inputCls} value={svcForm.icon} onChange={(e) => setSvcForm({ ...svcForm, icon: e.target.value })} placeholder="🩺" required /></Field>
+              <Field label="Prefix"><input className={inputCls} value={svcForm.prefix} onChange={(e) => setSvcForm({ ...svcForm, prefix: e.target.value })} placeholder="A" maxLength={2} required /></Field>
+              <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} required /></Field>
+            </div>
+            <button className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
+            {svcModal.mode === "edit" && (
+              <button type="button" onClick={async () => {
+                if (confirm("Are you sure you want to delete this service?")) {
+                  await removeService(bizId!, svcModal.id);
+                  setSvcModal(null);
+                  flash("Service deleted");
+                }
+              }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Service</button>
+            )}
+          </form>
         </Modal>
       )}
+
+      {/* STAFF MODAL */}
+      <Modal show={staffModal} onClose={() => setStaffModal(false)} title="Add Staff Account">
+        <form onSubmit={saveStaff} className="flex flex-col gap-4 mt-2">
+          <Field label="Staff Name"><input className={inputCls} placeholder="e.g. Counter 1" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required /></Field>
+          <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
+          <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
+          <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
+        </form>
+      </Modal>
 
       {toast && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-6 py-3.5 rounded-[14px] text-white text-[0.9rem] font-bold z-50 shadow-[0_12px_32px_rgba(10,17,40,0.4)] transition-all animate-in slide-in-from-bottom-4" style={{ background: "#0a1128" }}>{toast}</div>

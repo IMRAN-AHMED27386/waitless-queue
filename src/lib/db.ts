@@ -1,7 +1,7 @@
 import { db, functions } from "./firebase";
 import {
   collection, collectionGroup, doc, onSnapshot, query, where, orderBy,
-  updateDoc, addDoc, getDoc, deleteDoc, serverTimestamp,
+  updateDoc, addDoc, getDoc, deleteDoc, serverTimestamp, setDoc,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
@@ -305,7 +305,22 @@ export function listenBusiness(id: string, cb: (b: (Biz & { featureToggles?: Rec
 }
 
 export function setFeatureToggle(businessId: string, key: string, value: boolean) {
-  return updateDoc(doc(db, "businesses", businessId), { [`featureToggles.${key}`]: value });
+  return updateDoc(doc(db, "businesses", businessId), {
+    [`featureToggles.${key}`]: value
+  });
+}
+
+export function listenStaff(businessId: string, cb: (staff: any[]) => void) {
+  const q = query(collection(db, "users"), where("businessId", "==", businessId), where("role", "==", "staff"));
+  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+}
+
+export function addStaffUserRecord(uid: string, data: { email: string; name: string; businessId: string }) {
+  return setDoc(doc(db, "users", uid), { ...data, role: "staff" });
+}
+
+export function removeStaffUserRecord(uid: string) {
+  return deleteDoc(doc(db, "users", uid));
 }
 
 /** Self-signup: creates the caller's business + links their account to it as admin. */
