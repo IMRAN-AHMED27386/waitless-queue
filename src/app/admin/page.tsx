@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
   addBranch, updateBranch, addService, updateService, updateBusiness,
@@ -9,8 +10,7 @@ import {
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   type Branch, type HistTok, type Svc, type Biz,
 } from "@/lib/db";
-import { useAuthGuard } from "@/lib/auth";
-import SignOut from "@/components/SignOut";
+import { useAuthGuard, signOutUser } from "@/lib/auth";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import QRCode from "qrcode";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -43,6 +43,7 @@ const toggleGroups = [
 
 export default function Admin() {
   const { ready, user } = useAuthGuard(["admin"]);
+  const router = useRouter();
   const bizId = user?.businessId ?? "";
   const [bizName, setBizName] = useState("Business");
   const [bizDoc, setBizDoc] = useState<(Biz & { featureToggles?: Record<string, boolean> }) | null>(null);
@@ -64,7 +65,6 @@ export default function Admin() {
   const [tokens, setTokens] = useState<HistTok[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
 
-  // Persisted toggles for the selected business (reset to defaults on switch).
   useEffect(() => {
     if (!bizId) return;
     setToggles(initial);
@@ -79,7 +79,6 @@ export default function Admin() {
     });
   }, [bizId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Live data for the stat cards + branch cards.
   useEffect(() => {
     if (!bizId) return;
     const u1 = listenBranches(bizId, setBranches);
@@ -88,7 +87,6 @@ export default function Admin() {
     return () => { u1(); u2(); u3(); };
   }, [bizId]);
 
-  // Plan state for the banner + free-plan gates.
   const planNow = effectivePlan(bizDoc);
   const isTrial = bizDoc?.status === "trial" && planNow === "pro";
   const daysLeft = trialDaysLeft(bizDoc);
@@ -106,14 +104,11 @@ export default function Admin() {
     { l: "Completion Rate", v: `${completion}%`, c: `${served} served`, icon: "✅", bg: "rgba(114,9,183,.1)" },
   ];
 
-  function flash(msg: string) {
-    setToast(msg);
-    window.setTimeout(() => setToast(null), 2000);
-  }
+  function flash(msg: string) { setToast(msg); window.setTimeout(() => setToast(null), 2000); }
   function toggle(id: string, label: string) {
     const next = !toggles[id];
-    setToggles((t) => ({ ...t, [id]: next })); // optimistic
-    setFeatureToggle(bizId, id, next);      // persist to Firestore
+    setToggles((t) => ({ ...t, [id]: next }));
+    setFeatureToggle(bizId, id, next);
     flash(`${label} ${next ? "enabled" : "disabled"} · saved`);
   }
 
@@ -130,18 +125,11 @@ export default function Admin() {
         flash("Branch updated");
       }
       setModal(null);
-    } catch (error: any) {
-      console.error(error);
-      flash("Error: " + (error.message || "Failed to save branch"));
-    }
+    } catch (error: any) { console.error(error); flash("Error: " + (error.message || "Failed to save branch")); }
   }
 
   function openNewSvc() {
-    // Free plan includes exactly one service line — more needs Pro.
-    if (planNow === "free" && services.length >= 1) {
-      flash("Free plan includes 1 service — upgrade to Pro to add more");
-      return;
-    }
+    if (planNow === "free" && services.length >= 1) { flash("Free plan includes 1 service — upgrade to Pro to add more"); return; }
     setSvcForm({ name: "", icon: "🩺", prefix: "A", avgMins: 5 }); setSvcModal({ mode: "new" });
   }
   function openEditSvc(s: Svc) { setSvcForm({ name: s.name, icon: s.icon, prefix: s.prefix, avgMins: s.avgMins }); setSvcModal({ mode: "edit", id: s.id }); }
@@ -167,261 +155,302 @@ export default function Admin() {
     flash(`Country changed · saved`);
   }
 
+  async function doSignOut() {
+    await signOutUser();
+    router.replace("/login");
+  }
+
   if (!ready) return (
-    <div className="flex-1 grid place-items-center">
+    <div className="flex-1 h-screen grid place-items-center bg-[#f5f8fd]">
       <div className="flex flex-col items-center gap-3 animate-pulse">
-        <div className="grid place-items-center w-14 h-14 rounded-[12px] text-white text-2xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)" }}>⚡</div>
-        <div className="font-display text-xl font-bold text-ink">Waitless</div>
-        <div className="text-[0.85rem] text-ink-3">Verifying access…</div>
+        <div className="grid place-items-center w-16 h-16 rounded-[14px] text-white text-3xl shadow-xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)" }}>⚡</div>
+        <div className="font-display text-2xl font-bold text-ink tracking-tight mt-2">Waitless</div>
+        <div className="text-[0.95rem] font-medium text-ink-3">Verifying premium access…</div>
       </div>
     </div>
   );
 
   return (
-    <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
-      
-      {/* HEADER */}
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <Link href="/" className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 hover:border-acc hover:text-acc transition shadow-sm">&larr;</Link>
-          <div>
-            <h1 className="font-display text-[1.6rem] leading-tight font-bold text-ink">Business Admin</h1>
-            <p className="text-[0.85rem] text-ink-3">{bizName} · Branches, services & features</p>
+    <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
+      {/* ════════ SIDEBAR ════════ */}
+      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: "linear-gradient(180deg,#0a1128 0%,#162550 100%)", boxShadow: "4px 0 24px rgba(10,17,40,0.15)" }}>
+        <div className="p-7">
+          <div className="flex items-center gap-3.5 mb-12">
+            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)", boxShadow: "0 8px 24px rgba(49,92,255,.4)" }}>⚡</span>
+            <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
           </div>
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <SignOut />
-          <button onClick={openNew} className="text-[0.85rem] font-bold px-4 py-2.5 rounded-xl text-white hover:opacity-90 transition shadow-[0_8px_20px_rgba(49,92,255,0.25)]" style={{ background: "#315cff" }}>+ New Branch</button>
-        </div>
-      </div>
+          
+          <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>
+          <div className="font-display font-bold text-[1.1rem] px-1.5 mb-1 truncate leading-tight">{bizName}</div>
+          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId}</div>
 
-      {/* PLAN BANNER */}
-      {isTrial && (
-        <div className="px-5 py-4 rounded-2xl mb-8 bg-white border border-border shadow-sm flex items-center justify-between flex-wrap gap-4" style={{ borderLeft: "4px solid var(--acc)" }}>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
-              <div className="font-display text-[1.1rem] font-bold text-ink">Pro trial</div>
-              <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-acc/10 text-acc">{daysLeft} days left</span>
-            </div>
-            <div className="text-[0.85rem] text-ink-3 font-medium">After that you move to the Free plan (1 service · {FREE_MONTHLY_TOKENS.toLocaleString()} tokens/month).</div>
-          </div>
+          <nav className="flex flex-col gap-2">
+            <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">🏢 Dashboard</Link>
+            <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
+            <Link href="/staff" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🎫 Live Queue</Link>
+            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
+          </nav>
         </div>
-      )}
-      {planNow === "free" && (
-        <div className="px-5 py-4 rounded-2xl mb-8 bg-white border border-border shadow-sm flex items-center justify-between flex-wrap gap-4" style={usagePct >= 80 ? { borderColor: "var(--wn)" } : {}}>
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="font-display text-[1.1rem] font-bold text-ink">Free plan usage</div>
-              {usagePct >= 80 && (
-                <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>
-                  {usagePct >= 100 ? "Limit Reached" : "Approaching Limit"}
-                </span>
-              )}
-            </div>
-            <div className="h-2 rounded-full overflow-hidden bg-surface-2 max-w-[400px]">
-              <div className="h-full rounded-full transition-all" style={{ width: `${usagePct}%`, background: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--acc)" }} />
-            </div>
-            {usagePct >= 80 && (
-              <div className="text-[0.8rem] mt-2 font-medium" style={{ color: usagePct >= 100 ? "var(--dng)" : "var(--wn)" }}>
-                {usagePct >= 100
-                  ? "Limit reached — customers can't take new tokens until next month. Upgrade to Pro."
-                  : "You're close to this month's limit — consider upgrading to Pro for unlimited tokens."}
-              </div>
-            )}
-          </div>
-          <div className="text-right">
-            <div className="num text-2xl font-bold text-ink">{usedTokens.toLocaleString()} <span className="text-[1rem] text-ink-3 font-medium">/ {FREE_MONTHLY_TOKENS.toLocaleString()}</span></div>
-            <div className="text-[0.75rem] font-bold text-acc mt-1 cursor-pointer hover:underline">Upgrade to Pro &rarr;</div>
-          </div>
-        </div>
-      )}
-
-      {/* STATS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((s) => (
-          <div key={s.l} className="bg-white border border-border rounded-[18px] p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <span className="text-[0.8rem] font-bold uppercase tracking-wide text-ink-3">{s.l}</span>
-              <span className="grid place-items-center w-10 h-10 rounded-[12px] text-[1.1rem]" style={{ background: s.bg }}>{s.icon}</span>
-            </div>
-            <div className="num text-[2rem] font-display font-bold text-ink leading-none mb-1.5" dangerouslySetInnerHTML={{ __html: s.v.replace('/', '<span class="text-ink-3 text-xl">/</span>') }}></div>
-            <div className="text-[0.8rem] font-semibold text-live">{s.c}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* 2 COLUMN LAYOUT */}
-      <div className="grid lg:grid-cols-2 gap-8">
         
-        {/* LEFT COL (Branches & Services) */}
-        <div>
-          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4">Branches</h2>
-          <div className="flex flex-col gap-4 mb-8">
-            {branches.length === 0 && <div className="text-[0.85rem] text-ink-3 py-4 text-center border border-dashed border-border rounded-xl">No branches added yet. Click + New Branch to get started!</div>}
-            {branches.map((b) => {
-              const open = b.status === "open";
-              return (
-                <div key={b.id} className="bg-white border border-border rounded-[20px] p-5 shadow-sm hover:border-acc/30 transition-colors">
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <div className="font-display text-[1.15rem] font-bold text-ink">{b.name}</div>
-                      <div className="text-[0.8rem] text-ink-3 font-medium mt-1">📍 {b.location}</div>
-                    </div>
-                    <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md"
-                      style={open ? { background: "rgba(6,214,160,.12)", color: "#06D6A0" } : { background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>
-                      ● {cap(b.status)}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-3 gap-2 text-center py-4 bg-surface-2 rounded-xl mb-4 border border-border/50">
-                    <Metric v={b.inQueue} l="In Queue" />
-                    <Metric v={b.counters} l="Counters" />
-                    <Metric v={b.avgWait} l="Avg Wait" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => openEdit(b)} className="py-2.5 rounded-xl text-[0.85rem] font-bold border border-border text-ink-2 hover:bg-surface-2 transition">Edit</button>
-                    <Link href="/staff" className="flex items-center justify-center py-2.5 rounded-xl text-[0.85rem] font-bold text-white transition shadow-[0_8px_20px_rgba(49,92,255,0.25)] hover:-translate-y-px" style={{ background: "#315cff" }}>View Queue &rsaquo;</Link>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="p-7 pt-0">
+          <div className="px-5 py-4 rounded-[16px] bg-white/5 border border-white/10 mb-5 shadow-sm relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2" />
+             <div className="text-[0.75rem] uppercase tracking-wider text-white/60 font-bold mb-1.5">Plan</div>
+             <div className="text-[1.1rem] font-bold flex items-center justify-between">
+               {cap(planNow)}
+               {isTrial && <span className="text-[0.7rem] text-[#06d6a0] bg-[#06d6a0]/20 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider">{daysLeft}d left</span>}
+             </div>
+          </div>
+          <button onClick={doSignOut} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white transition">
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      {/* ════════ MAIN DASHBOARD ════════ */}
+      <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10">
+        
+        <div className="max-w-[1000px] mx-auto">
+          {/* HEADER */}
+          <div className="flex items-center justify-between mb-10 gap-4 flex-wrap">
+            <div>
+              <h1 className="font-display text-[2.2rem] font-extrabold text-ink tracking-tight leading-none mb-2">Dashboard</h1>
+              <p className="text-[0.95rem] font-medium text-ink-3">Manage branches, services, and advanced features.</p>
+            </div>
+            <button onClick={openNew} className="text-[0.9rem] font-bold px-6 py-3.5 rounded-[14px] text-white transition hover:-translate-y-0.5 shadow-[0_12px_24px_rgba(49,92,255,0.25)]" style={{ background: "#315cff" }}>+ New Branch</button>
           </div>
 
-          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4">Services</h2>
-          <div className="flex flex-col gap-3">
-            {services.map((s) => (
-              <div key={s.id} className="flex items-center gap-4 bg-white border border-border rounded-[16px] p-3 shadow-sm hover:border-acc/30 transition">
-                <span className="grid place-items-center w-12 h-12 rounded-[12px] text-2xl bg-surface-2 border border-border/50 shrink-0">{s.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-display font-bold text-[1.05rem] text-ink truncate">{s.name}</div>
-                  <div className="text-[0.8rem] text-ink-3 font-medium mt-0.5">Prefix <span className="font-bold text-ink-2">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
+          {/* PLAN BANNERS */}
+          {planNow === "free" && (
+            <div className="px-6 py-5 rounded-[20px] mb-8 bg-white border border-border shadow-sm flex items-center justify-between flex-wrap gap-5 transition-all" style={usagePct >= 80 ? { borderColor: "var(--wn)" } : {}}>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2.5">
+                  <div className="font-display text-[1.15rem] font-bold text-ink">Free plan usage</div>
+                  {usagePct >= 80 && (
+                    <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>
+                      {usagePct >= 100 ? "Limit Reached" : "Approaching Limit"}
+                    </span>
+                  )}
                 </div>
-                <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2 rounded-xl border border-border text-ink-2 hover:bg-surface-2 mr-1">Edit</button>
+                <div className="h-2.5 rounded-full overflow-hidden bg-surface-2 max-w-[400px]">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${usagePct}%`, background: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--acc)" }} />
+                </div>
+                {usagePct >= 80 && (
+                  <div className="text-[0.85rem] mt-2.5 font-medium" style={{ color: usagePct >= 100 ? "var(--dng)" : "var(--wn)" }}>
+                    {usagePct >= 100
+                      ? "Limit reached — customers can't take new tokens until next month. Upgrade to Pro."
+                      : "You're close to this month's limit — consider upgrading to Pro for unlimited tokens."}
+                  </div>
+                )}
+              </div>
+              <div className="text-right">
+                <div className="num text-[1.6rem] font-extrabold text-ink">{usedTokens.toLocaleString()} <span className="text-[1.1rem] text-ink-3 font-medium">/ {FREE_MONTHLY_TOKENS.toLocaleString()}</span></div>
+                <div className="text-[0.8rem] font-bold text-acc mt-1.5 cursor-pointer hover:underline">Upgrade to Pro &rarr;</div>
+              </div>
+            </div>
+          )}
+
+          {/* STATS */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+            {stats.map((s) => (
+              <div key={s.l} className="bg-white border border-border rounded-[22px] p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl opacity-40 -translate-y-1/2 translate-x-1/2" style={{ background: s.bg }} />
+                <div className="flex items-start justify-between gap-2 mb-4 relative z-10">
+                  <span className="text-[0.75rem] font-bold uppercase tracking-widest text-ink-3">{s.l}</span>
+                  <span className="grid place-items-center w-10 h-10 rounded-[12px] text-[1.1rem] shadow-sm" style={{ background: s.bg }}>{s.icon}</span>
+                </div>
+                <div className="num text-[2.2rem] font-display font-extrabold text-ink leading-none mb-2 relative z-10" dangerouslySetInnerHTML={{ __html: s.v.replace('/', '<span class="text-ink-3/50 text-2xl font-semibold">/</span>') }}></div>
+                <div className="text-[0.8rem] font-bold text-live relative z-10">{s.c}</div>
               </div>
             ))}
-            <button onClick={openNewSvc} className="mt-2 py-3 rounded-[16px] text-[0.9rem] font-bold border border-dashed border-border text-ink-2 hover:bg-surface-2 transition hover:text-acc hover:border-acc/50">+ Add Service</button>
-          </div>
-        </div>
-
-        {/* RIGHT COL (Features & Toggles) */}
-        <div>
-          
-          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm flex items-center gap-5">
-            <div className="w-[96px] h-[96px] rounded-[14px] bg-surface-2 border border-border shrink-0 flex items-center justify-center p-2">
-              {qrUrl ? <img src={qrUrl} alt="QR" className="w-full h-full object-contain rounded-md" /> : <div className="w-full h-full border-[2px] border-dashed border-ink-3 rounded-md" />}
-            </div>
-            <div>
-              <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Customer QR code</div>
-              <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-3">Print & display at your counter. Customers scan it to join your queue — no app, no signup.</div>
-              <button className="text-[0.8rem] font-bold px-4 py-2 rounded-xl border border-border text-ink-2 hover:bg-surface-2 transition">Download Print Version</button>
-            </div>
           </div>
 
-          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm">
-            <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Country</div>
-            <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-4">Your business country determines phone format, currency display, and timezone.</div>
-            <div className="flex flex-wrap gap-2">
-              {DEFAULT_COUNTRIES.map((c) => {
-                const active = c.code === bizCountry;
-                return (
-                  <button key={c.code} onClick={() => saveCountry(c.code)}
-                    className="flex items-center gap-1.5 text-[0.85rem] font-bold px-3 py-2 rounded-xl border transition"
-                    style={active
-                      ? { background: "var(--al)", borderColor: "var(--acc)", color: "var(--acc)" }
-                      : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>
-                    {c.flag} {c.name}
-                    {active && <span className="text-[10px] ml-1 text-acc">✓</span>}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm">
-            <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Customer alert timing</div>
-            <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-4">When customers get notified as their turn nears. Counted in <span className="font-bold text-ink">tokens ahead</span>, so it stays accurate even when the queue jumps.</div>
+          <div className="grid lg:grid-cols-[1fr_360px] gap-8">
             
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <label className="block">
-                <span className="block text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-2">First heads-up (tokens away)</span>
-                <input type="number" min={1} max={50} value={headsUp} onChange={(e) => setHeadsUp(Number(e.target.value))} className="w-full px-4 py-3 rounded-xl border border-border bg-white text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
-              </label>
-              <label className="block">
-                <span className="block text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-2">Come now (tokens away)</span>
-                <input type="number" min={1} max={headsUp} value={comeNow} onChange={(e) => setComeNow(Number(e.target.value))} className="w-full px-4 py-3 rounded-xl border border-border bg-white text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
-              </label>
-            </div>
-            <button onClick={saveAlerts} className="w-full py-3 rounded-xl font-bold text-white transition hover:opacity-90 shadow-md" style={{ background: "#315cff" }}>Save alert timing</button>
-          </div>
-
-          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4 mt-8">Feature Controls</h2>
-          
-          {toggleGroups.map((g) => (
-            <div key={g.group} className="mb-6">
-              <div className="text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-3">{g.group}</div>
-              <div className="flex flex-col gap-2.5">
-                {g.items.map((it) => {
-                  const on = toggles[it.id];
-                  return (
-                    <div key={it.id} className="flex items-center justify-between gap-4 px-4 py-3.5 rounded-[16px] bg-white border border-border shadow-sm hover:border-acc/30 transition">
-                      <div className="flex-1">
-                        <div className="text-[0.95rem] font-bold text-ink">{it.label}</div>
-                        <div className="text-[0.8rem] text-ink-3 font-medium mt-0.5">{it.desc}</div>
+            {/* LEFT COL (Branches & Services) */}
+            <div className="flex flex-col gap-10">
+              
+              {/* BRANCHES */}
+              <section>
+                <h2 className="font-display font-bold text-[1.4rem] text-ink mb-5">Branches</h2>
+                <div className="flex flex-col gap-5">
+                  {branches.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-8 text-center border-2 border-dashed border-border rounded-[24px]">No branches added yet. Click + New Branch to get started!</div>}
+                  {branches.map((b) => {
+                    const open = b.status === "open";
+                    return (
+                      <div key={b.id} className="bg-white border border-border rounded-[24px] p-6 shadow-sm hover:shadow-md hover:border-acc/30 transition-all">
+                        <div className="flex items-start justify-between mb-5">
+                          <div>
+                            <div className="font-display text-[1.25rem] font-bold text-ink">{b.name}</div>
+                            <div className="text-[0.85rem] text-ink-3 font-medium mt-1 flex items-center gap-1.5">
+                              <span className="opacity-70">📍</span> {b.location}
+                            </div>
+                          </div>
+                          <span className="text-[0.7rem] font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border"
+                            style={open ? { background: "rgba(6,214,160,.1)", borderColor: "rgba(6,214,160,.2)", color: "#06D6A0" } : { background: "rgba(247,127,0,.1)", borderColor: "rgba(247,127,0,.2)", color: "var(--wn)" }}>
+                            ● {cap(b.status)}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-3 gap-3 text-center py-5 bg-surface-2/60 rounded-[16px] mb-5 border border-border/50">
+                          <Metric v={b.inQueue} l="In Queue" />
+                          <Metric v={b.counters} l="Counters" />
+                          <Metric v={b.avgWait} l="Avg Wait" />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <button onClick={() => openEdit(b)} className="py-3 rounded-[12px] text-[0.85rem] font-bold border border-border bg-white text-ink-2 hover:bg-surface-2 hover:shadow-sm transition">Edit Branch</button>
+                          <Link href="/staff" className="flex items-center justify-center py-3 rounded-[12px] text-[0.85rem] font-bold text-white transition shadow-[0_8px_20px_rgba(49,92,255,0.2)] hover:-translate-y-px hover:shadow-[0_12px_24px_rgba(49,92,255,0.3)]" style={{ background: "#315cff" }}>View Queue &rsaquo;</Link>
+                        </div>
                       </div>
-                      <button onClick={() => toggle(it.id, it.label)} role="switch" aria-checked={on}
-                        className="relative w-[48px] h-[28px] rounded-full shrink-0 transition-colors"
-                        style={{ background: on ? "#315cff" : "#dde3f4" }}>
-                        <span className="absolute top-[4px] w-5 h-5 rounded-full bg-white transition-all shadow-md"
-                          style={{ left: on ? "24px" : "4px" }} />
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                    );
+                  })}
+                </div>
+              </section>
 
+              {/* SERVICES */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Services</h2>
+                  <button onClick={openNewSvc} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Service</button>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {services.map((s) => (
+                    <div key={s.id} className="flex items-center gap-4 bg-white border border-border rounded-[20px] p-4 shadow-sm hover:border-acc/30 hover:shadow-md transition-all group">
+                      <span className="grid place-items-center w-14 h-14 rounded-[14px] text-2xl bg-surface-2 border border-border/60 shrink-0 shadow-sm group-hover:scale-105 transition-transform">{s.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-display font-bold text-[1.1rem] text-ink truncate mb-0.5">{s.name}</div>
+                        <div className="text-[0.85rem] text-ink-3 font-medium">Prefix <span className="font-bold text-ink-2 px-1.5 py-0.5 rounded bg-surface border border-border/50">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
+                      </div>
+                      <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+            </div>
+
+            {/* RIGHT COL (Settings & QR) */}
+            <div className="flex flex-col gap-6">
+              
+              {/* QR CODE CARD */}
+              <div className="bg-white border border-border rounded-[24px] p-6 shadow-sm flex flex-col items-center text-center">
+                <div className="w-[140px] h-[140px] rounded-[20px] bg-surface-2 border-2 border-border/60 p-2.5 mb-5 shadow-sm">
+                  {qrUrl ? <img src={qrUrl} alt="QR" className="w-full h-full object-contain rounded-[12px]" /> : <div className="w-full h-full border-[2px] border-dashed border-ink-3/30 rounded-[12px]" />}
+                </div>
+                <div className="font-display text-[1.2rem] font-bold text-ink mb-2">Customer QR code</div>
+                <div className="text-[0.85rem] text-ink-3 leading-relaxed font-medium mb-5 px-2">Print & display at your counter. Customers scan it to join your queue — no app, no signup.</div>
+                <button className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Download Print Version</button>
+              </div>
+
+              {/* TIMING CARD */}
+              <div className="bg-white border border-border rounded-[24px] p-6 shadow-sm">
+                <div className="font-display text-[1.1rem] font-bold text-ink mb-2">Alert Timing</div>
+                <div className="text-[0.8rem] text-ink-3 leading-relaxed font-medium mb-5">When customers get notified. Counted in <span className="font-bold text-ink">tokens ahead</span>.</div>
+                <div className="flex flex-col gap-4 mb-5">
+                  <label className="block">
+                    <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-ink-3 mb-2">Heads-up (tokens away)</span>
+                    <input type="number" min={1} max={50} value={headsUp} onChange={(e) => setHeadsUp(Number(e.target.value))} className="w-full px-4 py-3 rounded-[12px] border border-border bg-surface-2/50 text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:bg-white focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
+                  </label>
+                  <label className="block">
+                    <span className="block text-[0.7rem] font-bold uppercase tracking-wider text-ink-3 mb-2">Come now (tokens away)</span>
+                    <input type="number" min={1} max={headsUp} value={comeNow} onChange={(e) => setComeNow(Number(e.target.value))} className="w-full px-4 py-3 rounded-[12px] border border-border bg-surface-2/50 text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:bg-white focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
+                  </label>
+                </div>
+                <button onClick={saveAlerts} className="w-full py-3 rounded-[12px] font-bold text-white transition hover:opacity-90 shadow-[0_8px_16px_rgba(49,92,255,0.2)]" style={{ background: "#315cff" }}>Save timing</button>
+              </div>
+
+              {/* COUNTRY */}
+              <div className="bg-white border border-border rounded-[24px] p-6 shadow-sm">
+                <div className="font-display text-[1.1rem] font-bold text-ink mb-2">Country</div>
+                <div className="flex flex-wrap gap-2.5 mt-4">
+                  {DEFAULT_COUNTRIES.map((c) => {
+                    const active = c.code === bizCountry;
+                    return (
+                      <button key={c.code} onClick={() => saveCountry(c.code)}
+                        className="flex items-center gap-1.5 text-[0.8rem] font-bold px-3 py-2 rounded-[10px] border transition"
+                        style={active
+                          ? { background: "rgba(49,92,255,.08)", borderColor: "var(--acc)", color: "var(--acc)" }
+                          : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>
+                        {c.flag} {c.name}
+                        {active && <span className="text-[10px] ml-1 text-acc">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* TOGGLES */}
+              <div className="bg-white border border-border rounded-[24px] p-6 shadow-sm">
+                <div className="font-display text-[1.1rem] font-bold text-ink mb-5">Features</div>
+                {toggleGroups.map((g) => (
+                  <div key={g.group} className="mb-6 last:mb-0">
+                    <div className="text-[0.7rem] font-bold uppercase tracking-widest text-ink-3 mb-3">{g.group}</div>
+                    <div className="flex flex-col gap-1">
+                      {g.items.map((it) => {
+                        const on = toggles[it.id];
+                        return (
+                          <div key={it.id} className="flex items-center justify-between gap-4 py-3 border-b border-border/50 last:border-0 group">
+                            <div className="flex-1">
+                              <div className="text-[0.9rem] font-bold text-ink group-hover:text-acc transition-colors">{it.label}</div>
+                            </div>
+                            <button onClick={() => toggle(it.id, it.label)} role="switch" aria-checked={on}
+                              className="relative w-[44px] h-[24px] rounded-full shrink-0 transition-colors"
+                              style={{ background: on ? "#315cff" : "#dde3f4" }}>
+                              <span className="absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white transition-all shadow-sm"
+                                style={{ left: on ? "23px" : "3px" }} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+            </div>
+          </div>
         </div>
 
-      </div>
+      </main>
 
+      {/* MODALS */}
       {modal && (
         <Modal title={modal.mode === "new" ? "New branch" : "Edit branch"} onClose={() => setModal(null)}>
           <Field label="Branch name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Downtown Branch" /></Field>
           <Field label="Location"><input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Area, City" /></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Counters"><input type="number" min={1} className={inputCls} value={form.counters} onChange={(e) => setForm({ ...form, counters: Number(e.target.value) })} /></Field>
             <Field label="Status"><select className={inputCls} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="open">Open</option><option value="busy">Busy</option><option value="closed">Closed</option></select></Field>
           </div>
-          <button onClick={saveBranch} disabled={!form.name.trim()} className="w-full mt-4 py-3 rounded-xl font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{modal.mode === "new" ? "Add branch" : "Save changes"}</button>
+          <button onClick={saveBranch} disabled={!form.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{modal.mode === "new" ? "Add branch" : "Save changes"}</button>
         </Modal>
       )}
 
       {svcModal && (
         <Modal title={svcModal.mode === "new" ? "New service" : "Edit service"} onClose={() => setSvcModal(null)}>
           <Field label="Service name"><input className={inputCls} value={svcForm.name} onChange={(e) => setSvcForm({ ...svcForm, name: e.target.value })} placeholder="e.g. General Doctor" /></Field>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             <Field label="Icon"><input className={inputCls} value={svcForm.icon} onChange={(e) => setSvcForm({ ...svcForm, icon: e.target.value })} placeholder="🩺" /></Field>
             <Field label="Prefix"><input className={inputCls} value={svcForm.prefix} onChange={(e) => setSvcForm({ ...svcForm, prefix: e.target.value })} placeholder="A" maxLength={2} /></Field>
             <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} /></Field>
           </div>
-          <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-4 py-3 rounded-xl font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
+          <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
         </Modal>
       )}
 
       {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-5 py-3 rounded-xl text-white text-[0.85rem] font-bold z-50 shadow-[0_10px_30px_rgba(13,27,62,0.4)]" style={{ background: "#0D1B3E" }}>{toast}</div>
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-6 py-3.5 rounded-[14px] text-white text-[0.9rem] font-bold z-50 shadow-[0_12px_32px_rgba(10,17,40,0.4)] transition-all animate-in slide-in-from-bottom-4" style={{ background: "#0a1128" }}>{toast}</div>
       )}
-    </main>
+    </div>
   );
 }
 
 function Metric({ v, l }: { v: string | number; l: string }) {
   return (
     <div>
-      <div className="num text-xl font-bold text-ink">{v}</div>
-      <div className="text-[0.7rem] uppercase tracking-wider font-bold text-ink-3 mt-1">{l}</div>
+      <div className="num text-[1.4rem] font-extrabold text-ink">{v}</div>
+      <div className="text-[0.65rem] uppercase tracking-widest font-bold text-ink-3 mt-1.5">{l}</div>
     </div>
   );
 }
