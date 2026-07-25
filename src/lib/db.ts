@@ -1,7 +1,7 @@
 import { db, functions } from "./firebase";
 import {
   collection, collectionGroup, doc, onSnapshot, query, where, orderBy,
-  updateDoc, addDoc, getDoc, serverTimestamp,
+  updateDoc, addDoc, getDoc, deleteDoc, serverTimestamp,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 
@@ -153,7 +153,11 @@ export function addBranch(businessId: string, data: Omit<Branch, "id">) {
 }
 
 export function updateBranch(businessId: string, branchId: string, data: Partial<Branch>) {
-  return updateDoc(doc(db, `businesses/${businessId}/branches/${branchId}`), data);
+  return updateDoc(doc(db, "businesses", businessId, "branches", branchId), data);
+}
+
+export function removeBranch(businessId: string, branchId: string) {
+  return deleteDoc(doc(db, "businesses", businessId, "branches", branchId));
 }
 
 export function addService(businessId: string, data: { name: string; icon: string; prefix: string; avgMins: number }) {
@@ -161,7 +165,15 @@ export function addService(businessId: string, data: { name: string; icon: strin
 }
 
 export function updateService(businessId: string, serviceId: string, data: Partial<Svc>) {
-  return updateDoc(doc(db, `businesses/${businessId}/services/${serviceId}`), data);
+  return updateDoc(doc(db, "businesses", businessId, "services", serviceId), data);
+}
+
+export function removeService(businessId: string, serviceId: string) {
+  return deleteDoc(doc(db, "businesses", businessId, "services", serviceId));
+}
+
+export function removeBusiness(businessId: string) {
+  return deleteDoc(doc(db, "businesses", businessId));
 }
 
 export function addBusiness(data: Record<string, unknown>) {

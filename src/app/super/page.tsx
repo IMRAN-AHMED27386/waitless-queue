@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenBusinesses, addBusiness, updateBusiness, listenCategories, addCategory, removeCategory, updateCategory, type Category } from "@/lib/db";
+import { listenBusinesses, addBusiness, updateBusiness, removeBusiness, listenCategories, addCategory, removeCategory, updateCategory, type Category } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -375,6 +375,15 @@ export default function Super() {
           )}
 
           <button onClick={save} disabled={modal.mode === "new" && !form.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white transition shadow-[0_10px_24px_rgba(114,9,183,0.3)] hover:-translate-y-px disabled:opacity-50" style={{ background: "#7209b7" }}>{modal.mode === "new" ? "Onboard Business" : "Save Changes"}</button>
+          {modal.mode === "manage" && (
+            <button onClick={async () => {
+              if (confirm(`Are you sure you want to completely delete ${modal.row.name}? This action cannot be undone.`)) {
+                await removeBusiness(modal.row.id);
+                setModal(null);
+                flash("Business deleted");
+              }
+            }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Business</button>
+          )}
         </Modal>
       )}
       {toast && <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-6 py-3.5 rounded-[14px] text-white text-[0.9rem] font-bold z-50 shadow-[0_12px_32px_rgba(10,17,40,0.4)] transition-all animate-in slide-in-from-bottom-4" style={{ background: "#1c0a30" }}>{toast}</div>}

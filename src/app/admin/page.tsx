@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
-  addBranch, updateBranch, addService, updateService, updateBusiness,
+  addBranch, updateBranch, removeBranch, addService, updateService, removeService, updateBusiness,
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   type Branch, type HistTok, type Svc, type Biz,
@@ -423,6 +423,15 @@ export default function Admin() {
             <Field label="Status"><select className={inputCls} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="open">Open</option><option value="busy">Busy</option><option value="closed">Closed</option></select></Field>
           </div>
           <button onClick={saveBranch} disabled={!form.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{modal.mode === "new" ? "Add branch" : "Save changes"}</button>
+          {modal.mode === "edit" && (
+            <button onClick={async () => {
+              if (confirm("Are you sure you want to delete this branch?")) {
+                await removeBranch(bizId!, modal.id);
+                setModal(null);
+                flash("Branch deleted");
+              }
+            }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Branch</button>
+          )}
         </Modal>
       )}
 
@@ -435,6 +444,15 @@ export default function Admin() {
             <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} /></Field>
           </div>
           <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
+          {svcModal.mode === "edit" && (
+            <button onClick={async () => {
+              if (confirm("Are you sure you want to delete this service?")) {
+                await removeService(bizId!, svcModal.id);
+                setSvcModal(null);
+                flash("Service deleted");
+              }
+            }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Service</button>
+          )}
         </Modal>
       )}
 
