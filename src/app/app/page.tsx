@@ -11,7 +11,7 @@ import {
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 import { countryByCode } from "@/lib/countries";
 
-const categories = ["All", "Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
+const categories = ["All", "Hospitals", "Clinics", "Banks", "Government", "Restaurants"];
 // Platform WhatsApp number (digits only, country code included). Empty = feature hidden.
 const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 

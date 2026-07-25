@@ -404,7 +404,7 @@ exports.registerPush = onCall(opts, async (req) => {
   return { ok: true };
 });
 
-const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
+const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
 
 // A new business owner self-signs-up: they've just created their Firebase Auth
 // account client-side (so req.auth is theirs, can't be spoofed), and this creates

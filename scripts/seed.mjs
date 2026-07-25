@@ -21,7 +21,7 @@ const adminAuth = getAuth();
 // Business metadata for the Super Admin table.
 const meta = {
   "sunshine-clinic": { plan: "pro", status: "active", monthlyTokens: 8420, industry: "Hospital" },
-  "city-salon": { plan: "free", status: "active", monthlyTokens: 1240, industry: "Salon" },
+  "city-salon": { plan: "free", status: "active", monthlyTokens: 1240, industry: "Restaurants" },
   "bank-maldives": { plan: "enterprise", status: "active", monthlyTokens: 22100, industry: "Bank" },
   "civil-service": { plan: "pro", status: "active", monthlyTokens: 5640, industry: "Govt" },
   "harbor-restaurant": { plan: "free", status: "trial", monthlyTokens: 320, industry: "Restaurant" },
@@ -55,7 +55,7 @@ const businesses = [
     ],
   },
   {
-    id: "city-salon", name: "City Salon", category: "Salons", categoryIcon: "✂️",
+    id: "city-salon", name: "City Diner", category: "Restaurants", categoryIcon: "🍽️",
     logo: "💈", location: "Soho, London", country: "GB", distanceKm: 2.4, likes: 88,
     services: [
       { id: "cut", name: "Haircut", icon: "✂️", prefix: "A", currentServing: 12, lastIssued: 14, avgMins: 20 },

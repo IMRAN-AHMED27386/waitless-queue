@@ -14,7 +14,6 @@ const stats = [
 const industries = [
   { i: "H", l: "Hospitals" },
   { i: "C", l: "Clinics" },
-  { i: "S", l: "Salons" },
   { i: "B", l: "Banks" },
   { i: "G", l: "Government" },
   { i: "R", l: "Restaurants" },

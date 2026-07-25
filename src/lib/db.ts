@@ -43,8 +43,8 @@ export function tokensUsedThisMonth(b?: Pick<Biz, "monthlyTokens" | "tokensMonth
 
 export const ALERT_HEADS_UP_DEFAULT = 10;
 export const ALERT_COME_NOW_DEFAULT = 3;
-export const BUSINESS_CATEGORIES = ["Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
-export const CATEGORY_ICON: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
+export const BUSINESS_CATEGORIES = ["Hospitals", "Clinics", "Banks", "Government", "Restaurants"];
+export const CATEGORY_ICON: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
 export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;

@@ -30,8 +30,8 @@ const planStyle: Record<string, React.CSSProperties> = {
 const planPrice: Record<string, number> = { free: 0, pro: 49, enterprise: 199 };
 const cap = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) : "—");
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
-const categories = ["Hospitals", "Clinics", "Salons", "Banks", "Government", "Restaurants"];
-const catIcon: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Salons: "✂️", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
+const categories = ["Hospitals", "Clinics", "Banks", "Government", "Restaurants"];
+const catIcon: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
 
 const isPaidPlan = (plan?: string) => plan === "pro" || plan === "enterprise";
 // Per-cycle price. Yearly bills 12× the monthly rate (no processor — recorded manually).

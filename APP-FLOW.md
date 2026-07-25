@@ -78,7 +78,7 @@ Open **two browser windows** side by side:
 > "Waitless turns any waiting line into a digital queue. Your customers scan a QR or open a
 > link, take a token from their phone, and watch their place in line live — no crowding at a
 > counter. Your staff call the next person with one tap, and a TV screen shows who's up.
-> You get analytics on wait times and peak hours. It works for clinics, banks, salons,
+> You get analytics on wait times and peak hours. It works for clinics, banks, restaurants,
 > government offices, restaurants — anywhere people wait."
 
 Then **show the loop** (token on a phone → call it on staff → watch the TV board update).
