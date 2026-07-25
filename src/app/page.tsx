@@ -310,8 +310,8 @@ export default function Home() {
               {p.featured && <span className="absolute top-[18px] right-[18px] rounded-full px-[10px] py-[6px] text-[0.72rem] font-black" style={{ background: "#eaf0ff", color: "var(--acc)" }}>Most popular</span>}
               <small className="text-ink-3 font-black uppercase">{p.plan}</small>
               <h3 className="font-display text-[1.4rem] font-extrabold mt-3 mb-2">{p.name}</h3>
-              <div className="flex items-end gap-1.5 mt-0 mb-[22px] font-black num">
-                {p.crossedPrice && <span className="text-[1.5rem] text-ink-3 line-through opacity-60 pb-[4px]">{p.crossedPrice}</span>}
+              <div className="flex items-end gap-2.5 mt-0 mb-[22px] font-black num">
+                {p.crossedPrice && <span className="text-[1.8rem] text-[#6b7280] line-through decoration-1 pb-[2px]">{p.crossedPrice}</span>}
                 <span className="text-[2.4rem] leading-[1]">{p.price}</span>
                 {p.period && <span className="pb-[4px] text-[0.86rem] font-extrabold text-ink-3">{p.period}</span>}
               </div>
