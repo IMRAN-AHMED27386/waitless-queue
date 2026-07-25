@@ -252,7 +252,7 @@ export default function Admin() {
         <div>
           <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4">Branches</h2>
           <div className="flex flex-col gap-4 mb-8">
-            {branches.length === 0 && <div className="text-[0.85rem] text-ink-3 py-3">Loading branches…</div>}
+            {branches.length === 0 && <div className="text-[0.85rem] text-ink-3 py-4 text-center border border-dashed border-border rounded-xl">No branches added yet. Click + New Branch to get started!</div>}
             {branches.map((b) => {
               const open = b.status === "open";
               return (
