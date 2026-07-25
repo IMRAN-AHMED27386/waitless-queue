@@ -5,13 +5,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
   waitingOf, paceOf, hasLivePace, ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
-  listenTokensByPhone,
+  listenTokensByPhone, BUSINESS_CATEGORIES,
   type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 import { countryByCode } from "@/lib/countries";
 
-const categories = ["All", "Hospitals", "Clinics", "Banks", "Passport Office", "Restaurants"];
+const categories = ["All", ...BUSINESS_CATEGORIES];
 const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 
 type Step = "discover" | "service" | "details" | "token" | "feedback";

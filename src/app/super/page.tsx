@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenBusinesses, addBusiness, updateBusiness } from "@/lib/db";
+import { listenBusinesses, addBusiness, updateBusiness, BUSINESS_CATEGORIES, CATEGORY_ICON } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -30,8 +30,8 @@ const planStyle: Record<string, React.CSSProperties> = {
 const planPrice: Record<string, number> = { free: 0, pro: 49, enterprise: 199 };
 const cap = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) : "—");
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
-const categories = ["Hospitals", "Clinics", "Banks", "Passport Office", "Restaurants"];
-const catIcon: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", "Passport Office": "🛂", Restaurants: "🍽️" };
+const categories = BUSINESS_CATEGORIES;
+const catIcon = CATEGORY_ICON;
 
 const isPaidPlan = (plan?: string) => plan === "pro" || plan === "enterprise";
 const priceFor = (plan?: string, cycle?: string) => planPrice[plan ?? "free"] * (cycle === "yearly" ? 12 : 1);
