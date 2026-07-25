@@ -38,7 +38,7 @@
   --color-surface: var(--sf);
   --color-surface-2: var(--s2);
   --color-page: var(--bg);
-  --font-display: var(--font-inter);
+  --font-display: var(--font-outfit);
   --font-sans: var(--font-inter);
   --font-num: var(--font-inter);
 }
@@ -50,7 +50,7 @@ body {
 }
 
 h1, h2, h3, h4, .font-display {
-  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-outfit), Outfit, ui-sans-serif, system-ui, sans-serif;
 }
 
 .num {

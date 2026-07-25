@@ -11,7 +11,7 @@ import {
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 import { countryByCode } from "@/lib/countries";
 
-const categories = ["All", "Hospitals", "Clinics", "Banks", "Government", "Restaurants"];
+const categories = ["All", "Hospitals", "Clinics", "Banks", "Passport Office", "Restaurants"];
 const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 
 type Step = "discover" | "service" | "details" | "token" | "feedback";
