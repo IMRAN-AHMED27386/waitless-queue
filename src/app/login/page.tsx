@@ -84,8 +84,9 @@ export default function Login() {
       const cred = await signIn(em, p);
       const role = await getRole(cred.user.uid);
       router.replace(homeFor(role));
-    } catch {
-      setErr("Wrong email or password.");
+    } catch (error: any) {
+      console.error("Email Auth Error:", error);
+      setErr("Login failed: " + (error?.message || "Check console."));
       setBusy(false);
     }
   }
@@ -96,8 +97,9 @@ export default function Login() {
       const cred = await signInWithGoogle();
       const role = await getRole(cred.user.uid);
       router.replace(homeFor(role));
-    } catch {
-      setErr("Google sign-in was cancelled or failed.");
+    } catch (error: any) {
+      console.error("Google Auth Error:", error);
+      setErr("Google login failed: " + (error?.message || "Check console."));
       setBusy(false);
     }
   }
