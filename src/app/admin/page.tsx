@@ -100,7 +100,7 @@ export default function Admin() {
   const activeBranches = branches.filter((b) => b.status !== "closed").length;
   const avgSvc = services.length ? Math.round(services.reduce((n, s) => n + s.avgMins, 0) / services.length) : 0;
   const stats = [
-    { l: "Active Tokens", v: `${tokens.length}`, c: "live total", icon: "🎫", bg: "var(--al)" },
+    { l: "Active Tokens", v: `${tokens.length}`, c: "live total", icon: "🎫", bg: "rgba(49,92,255,.1)" },
     { l: "Avg Service Time", v: `${avgSvc}m`, c: "across services", icon: "⏱️", bg: "rgba(6,214,160,.12)" },
     { l: "Branches Active", v: `${activeBranches}/${branches.length}`, c: branches.length ? "operating" : "—", icon: "🏢", bg: "rgba(247,127,0,.12)" },
     { l: "Completion Rate", v: `${completion}%`, c: `${served} served`, icon: "✅", bg: "rgba(114,9,183,.1)" },
@@ -165,192 +165,220 @@ export default function Admin() {
   if (!ready) return (
     <div className="flex-1 grid place-items-center">
       <div className="flex flex-col items-center gap-3 animate-pulse">
-        <div className="grid place-items-center w-14 h-14 rounded-2xl text-white text-2xl" style={{ background: "linear-gradient(135deg,#4361EE,#818CF8)" }}>⚡</div>
+        <div className="grid place-items-center w-14 h-14 rounded-[12px] text-white text-2xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)" }}>⚡</div>
         <div className="font-display text-xl font-bold text-ink">Waitless</div>
-        <div className="text-sm text-ink-3">Verifying access…</div>
+        <div className="text-[0.85rem] text-ink-3">Verifying access…</div>
       </div>
     </div>
   );
 
   return (
-    <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-4">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-5">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="grid place-items-center w-9 h-9 rounded-[10px] border border-border bg-surface text-ink-2" aria-label="Home">←</Link>
+    <main className="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-20">
+      
+      {/* HEADER */}
+      <div className="flex items-center justify-between flex-wrap gap-4 mb-8">
+        <div class="flex items-center gap-4">
+          <Link href="/" className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 hover:border-acc hover:text-acc transition shadow-sm">&larr;</Link>
           <div>
-            <h1 className="font-display text-xl font-bold text-ink">Business Admin</h1>
-            <p className="text-xs text-ink-3">{bizName} · Branches, services &amp; features</p>
+            <h1 className="font-display text-[1.6rem] leading-tight font-bold text-ink">Business Admin</h1>
+            <p className="text-[0.85rem] text-ink-3">{bizName} · Branches, services & features</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           <SignOut />
-          <button onClick={openNew} className="text-[13px] font-semibold px-3.5 py-2 rounded-[10px] text-white bg-acc hover:bg-acc-dark transition">+ New Branch</button>
+          <button onClick={openNew} className="text-[0.85rem] font-bold px-4 py-2.5 rounded-xl text-white hover:opacity-90 transition shadow-[0_8px_20px_rgba(49,92,255,0.25)]" style={{ background: "#315cff" }}>+ New Branch</button>
         </div>
       </div>
 
-      {/* Plan banner: trial countdown, or free-plan usage with 80%/100% warnings */}
+      {/* PLAN BANNER */}
       {isTrial && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl mb-5" style={{ background: "var(--al)", border: "1px solid var(--acc)" }}>
-          <span className="text-lg">⭐</span>
-          <div className="text-[13px] text-ink-2">
-            <span className="font-bold text-ink">Pro trial — {daysLeft} day{daysLeft === 1 ? "" : "s"} left.</span>{" "}
-            After that you move to the Free plan (1 service · {FREE_MONTHLY_TOKENS.toLocaleString()} tokens/month).
+        <div className="px-5 py-4 rounded-2xl mb-8 bg-white border border-border shadow-sm flex items-center justify-between flex-wrap gap-4" style={{ borderLeft: "4px solid var(--acc)" }}>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <div className="font-display text-[1.1rem] font-bold text-ink">Pro trial</div>
+              <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-acc/10 text-acc">{daysLeft} days left</span>
+            </div>
+            <div className="text-[0.85rem] text-ink-3 font-medium">After that you move to the Free plan (1 service · {FREE_MONTHLY_TOKENS.toLocaleString()} tokens/month).</div>
           </div>
         </div>
       )}
       {planNow === "free" && (
-        <div className="px-4 py-3 rounded-2xl mb-5 bg-surface border" style={{ borderColor: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--bd)" }}>
-          <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-            <div className="text-[13px] font-bold text-ink">Free plan · monthly tokens</div>
-            <div className="num text-[13px] font-semibold" style={{ color: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--t2)" }}>
-              {usedTokens.toLocaleString()} / {FREE_MONTHLY_TOKENS.toLocaleString()}
+        <div className="px-5 py-4 rounded-2xl mb-8 bg-white border border-border shadow-sm flex items-center justify-between flex-wrap gap-4" style={usagePct >= 80 ? { borderColor: "var(--wn)" } : {}}>
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="font-display text-[1.1rem] font-bold text-ink">Free plan usage</div>
+              {usagePct >= 80 && (
+                <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md" style={{ background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>
+                  {usagePct >= 100 ? "Limit Reached" : "Approaching Limit"}
+                </span>
+              )}
             </div>
-          </div>
-          <div className="h-1.5 rounded-full overflow-hidden bg-surface-2">
-            <div className="h-full rounded-full transition-all" style={{ width: `${usagePct}%`, background: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--acc)" }} />
-          </div>
-          {usagePct >= 80 && (
-            <div className="text-[11.5px] mt-2 font-semibold" style={{ color: usagePct >= 100 ? "var(--dng)" : "var(--wn)" }}>
-              {usagePct >= 100
-                ? "Limit reached — customers can't take new tokens until next month. Upgrade to Pro for unlimited tokens."
-                : "You're close to this month's limit — consider upgrading to Pro for unlimited tokens."}
+            <div className="h-2 rounded-full overflow-hidden bg-surface-2 max-w-[400px]">
+              <div className="h-full rounded-full transition-all" style={{ width: `${usagePct}%`, background: usagePct >= 100 ? "var(--dng)" : usagePct >= 80 ? "var(--wn)" : "var(--acc)" }} />
             </div>
-          )}
+            {usagePct >= 80 && (
+              <div className="text-[0.8rem] mt-2 font-medium" style={{ color: usagePct >= 100 ? "var(--dng)" : "var(--wn)" }}>
+                {usagePct >= 100
+                  ? "Limit reached — customers can't take new tokens until next month. Upgrade to Pro."
+                  : "You're close to this month's limit — consider upgrading to Pro for unlimited tokens."}
+              </div>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="num text-2xl font-bold text-ink">{usedTokens.toLocaleString()} <span className="text-[1rem] text-ink-3 font-medium">/ {FREE_MONTHLY_TOKENS.toLocaleString()}</span></div>
+            <div className="text-[0.75rem] font-bold text-acc mt-1 cursor-pointer hover:underline">Upgrade to Pro &rarr;</div>
+          </div>
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+      {/* STATS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((s) => (
-          <div key={s.l} className="bg-surface border border-border rounded-2xl p-4" style={{ boxShadow: "var(--sh)" }}>
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="text-xs text-ink-3 font-medium leading-tight">{s.l}</span>
-              <span className="grid place-items-center w-9 h-9 rounded-[11px] text-base shrink-0" style={{ background: s.bg }}>{s.icon}</span>
+          <div key={s.l} className="bg-white border border-border rounded-[18px] p-5 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <span className="text-[0.8rem] font-bold uppercase tracking-wide text-ink-3">{s.l}</span>
+              <span className="grid place-items-center w-10 h-10 rounded-[12px] text-[1.1rem]" style={{ background: s.bg }}>{s.icon}</span>
             </div>
-            <div className="num text-2xl font-bold text-ink leading-none mb-1.5">{s.v}</div>
-            <div className="text-[11.5px] font-semibold" style={{ color: "#06D6A0" }}>{s.c}</div>
+            <div className="num text-[2rem] font-display font-bold text-ink leading-none mb-1.5" dangerouslySetInnerHTML={{ __html: s.v.replace('/', '<span class="text-ink-3 text-xl">/</span>') }}></div>
+            <div className="text-[0.8rem] font-semibold text-live">{s.c}</div>
           </div>
         ))}
       </div>
 
-      {/* 2-col */}
-      <div className="grid lg:grid-cols-2 gap-5">
-        {/* Branches */}
+      {/* 2 COLUMN LAYOUT */}
+      <div className="grid lg:grid-cols-2 gap-8">
+        
+        {/* LEFT COL (Branches & Services) */}
         <div>
-          <h2 className="font-display font-bold text-ink mb-3">Branches</h2>
-          <div className="flex flex-col gap-3">
-            {branches.length === 0 && <div className="text-sm text-ink-3 py-3">Loading branches…</div>}
+          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4">Branches</h2>
+          <div className="flex flex-col gap-4 mb-8">
+            {branches.length === 0 && <div className="text-[0.85rem] text-ink-3 py-3">Loading branches…</div>}
             {branches.map((b) => {
               const open = b.status === "open";
               return (
-                <div key={b.id} className="bg-surface border border-border rounded-2xl p-4" style={{ boxShadow: "var(--sh)" }}>
-                  <div className="flex items-start justify-between mb-3">
+                <div key={b.id} className="bg-white border border-border rounded-[20px] p-5 shadow-sm hover:border-acc/30 transition-colors">
+                  <div className="flex items-start justify-between mb-4">
                     <div>
-                      <div className="font-display font-bold text-ink">{b.name}</div>
-                      <div className="text-xs text-ink-3 mt-0.5">📍 {b.location}</div>
+                      <div className="font-display text-[1.15rem] font-bold text-ink">{b.name}</div>
+                      <div className="text-[0.8rem] text-ink-3 font-medium mt-1">📍 {b.location}</div>
                     </div>
-                    <span className="text-[11.5px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                    <span className="text-[0.7rem] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md"
                       style={open ? { background: "rgba(6,214,160,.12)", color: "#06D6A0" } : { background: "rgba(247,127,0,.12)", color: "var(--wn)" }}>
                       ● {cap(b.status)}
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                  
+                  <div className="grid grid-cols-3 gap-2 text-center py-4 bg-surface-2 rounded-xl mb-4 border border-border/50">
                     <Metric v={b.inQueue} l="In Queue" />
                     <Metric v={b.counters} l="Counters" />
                     <Metric v={b.avgWait} l="Avg Wait" />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button onClick={() => openEdit(b)} className="py-2 rounded-lg text-[12.5px] font-semibold border border-border text-ink-2 hover:bg-surface-2 transition">Edit</button>
-                    <Link href="/staff" className="py-2 rounded-lg text-[12.5px] font-semibold border border-border bg-surface-2 text-ink text-center hover:brightness-95 transition">View Queue</Link>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => openEdit(b)} className="py-2.5 rounded-xl text-[0.85rem] font-bold border border-border text-ink-2 hover:bg-surface-2 transition">Edit</button>
+                    <Link href="/staff" className="flex items-center justify-center py-2.5 rounded-xl text-[0.85rem] font-bold text-white transition shadow-[0_8px_20px_rgba(49,92,255,0.25)] hover:-translate-y-px" style={{ background: "#315cff" }}>View Queue &rsaquo;</Link>
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <h2 className="font-display font-bold text-ink mb-3 mt-6">Services</h2>
-          <div className="flex flex-col gap-2">
+          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4">Services</h2>
+          <div className="flex flex-col gap-3">
             {services.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 bg-surface border border-border rounded-xl p-3" style={{ boxShadow: "var(--sh)" }}>
-                <span className="grid place-items-center w-9 h-9 rounded-lg text-lg bg-surface-2 shrink-0">{s.icon}</span>
+              <div key={s.id} className="flex items-center gap-4 bg-white border border-border rounded-[16px] p-3 shadow-sm hover:border-acc/30 transition">
+                <span className="grid place-items-center w-12 h-12 rounded-[12px] text-2xl bg-surface-2 border border-border/50 shrink-0">{s.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-ink text-sm truncate">{s.name}</div>
-                  <div className="text-xs text-ink-3">Prefix {s.prefix} · ~{s.avgMins} min</div>
+                  <div className="font-display font-bold text-[1.05rem] text-ink truncate">{s.name}</div>
+                  <div className="text-[0.8rem] text-ink-3 font-medium mt-0.5">Prefix <span className="font-bold text-ink-2">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
                 </div>
-                <button onClick={() => openEditSvc(s)} className="text-[12px] font-semibold px-3 py-1.5 rounded-lg border border-border text-ink-2 hover:bg-surface-2">Edit</button>
+                <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2 rounded-xl border border-border text-ink-2 hover:bg-surface-2 mr-1">Edit</button>
               </div>
             ))}
-            <button onClick={openNewSvc} className="mt-1 py-2 rounded-xl text-[13px] font-semibold border border-dashed border-border text-ink-2 hover:bg-surface-2 transition">+ Add Service</button>
+            <button onClick={openNewSvc} className="mt-2 py-3 rounded-[16px] text-[0.9rem] font-bold border border-dashed border-border text-ink-2 hover:bg-surface-2 transition hover:text-acc hover:border-acc/50">+ Add Service</button>
           </div>
         </div>
 
-        {/* Feature toggles */}
+        {/* RIGHT COL (Features & Toggles) */}
         <div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <div className="bg-surface border border-border rounded-2xl p-4 mb-5 flex items-center gap-4" style={{ boxShadow: "var(--sh)" }}>
-            {qrUrl
-              ? <img src={qrUrl} alt="Customer QR code" width={92} height={92} className="rounded-lg shrink-0" />
-              : <div className="w-[92px] h-[92px] rounded-lg bg-surface-2 shrink-0" />}
+          
+          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm flex items-center gap-5">
+            <div className="w-[96px] h-[96px] rounded-[14px] bg-surface-2 border border-border shrink-0 flex items-center justify-center p-2">
+              {qrUrl ? <img src={qrUrl} alt="QR" className="w-full h-full object-contain rounded-md" /> : <div className="w-full h-full border-[2px] border-dashed border-ink-3 rounded-md" />}
+            </div>
             <div>
-              <div className="font-display font-bold text-ink mb-1">Customer QR code</div>
-              <div className="text-xs text-ink-3 leading-snug">Print &amp; display at your counter. Customers scan it to join your queue — no app, no signup.</div>
+              <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Customer QR code</div>
+              <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-3">Print & display at your counter. Customers scan it to join your queue — no app, no signup.</div>
+              <button className="text-[0.8rem] font-bold px-4 py-2 rounded-xl border border-border text-ink-2 hover:bg-surface-2 transition">Download Print Version</button>
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-2xl p-4 mb-5" style={{ boxShadow: "var(--sh)" }}>
-            <div className="font-display font-bold text-ink mb-1">Country</div>
-            <div className="text-xs text-ink-3 leading-snug mb-3">Your business country determines phone format, currency display, and timezone.</div>
+          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm">
+            <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Country</div>
+            <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-4">Your business country determines phone format, currency display, and timezone.</div>
             <div className="flex flex-wrap gap-2">
               {DEFAULT_COUNTRIES.map((c) => {
                 const active = c.code === bizCountry;
                 return (
                   <button key={c.code} onClick={() => saveCountry(c.code)}
-                    className="flex items-center gap-1.5 text-[13px] font-semibold px-3 py-2 rounded-xl border transition"
+                    className="flex items-center gap-1.5 text-[0.85rem] font-bold px-3 py-2 rounded-xl border transition"
                     style={active
                       ? { background: "var(--al)", borderColor: "var(--acc)", color: "var(--acc)" }
                       : { background: "var(--sf)", borderColor: "var(--bd)", color: "var(--t3)" }}>
                     {c.flag} {c.name}
-                    {active && <span className="text-[10px] ml-1">✓</span>}
+                    {active && <span className="text-[10px] ml-1 text-acc">✓</span>}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="bg-surface border border-border rounded-2xl p-4 mb-5" style={{ boxShadow: "var(--sh)" }}>
-            <div className="font-display font-bold text-ink mb-1">Customer alert timing</div>
-            <div className="text-xs text-ink-3 leading-snug mb-3">When customers get notified as their turn nears. Counted in <span className="font-semibold">tokens ahead</span>, so it stays accurate even when the queue jumps. Set higher for slow services (doctors), lower for fast ones (a bank counter).</div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="First heads-up (tokens away)">
-                <input type="number" min={1} max={50} className={inputCls} value={headsUp} onChange={(e) => setHeadsUp(Number(e.target.value))} />
-              </Field>
-              <Field label="Come now (tokens away)">
-                <input type="number" min={1} max={headsUp} className={inputCls} value={comeNow} onChange={(e) => setComeNow(Number(e.target.value))} />
-              </Field>
+          <div className="bg-white border border-border rounded-[20px] p-5 mb-6 shadow-sm">
+            <div className="font-display text-[1.2rem] font-bold text-ink mb-1.5">Customer alert timing</div>
+            <div className="text-[0.85rem] text-ink-3 leading-snug font-medium mb-4">When customers get notified as their turn nears. Counted in <span className="font-bold text-ink">tokens ahead</span>, so it stays accurate even when the queue jumps.</div>
+            
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <label className="block">
+                <span className="block text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-2">First heads-up (tokens away)</span>
+                <input type="number" min={1} max={50} value={headsUp} onChange={(e) => setHeadsUp(Number(e.target.value))} className="w-full px-4 py-3 rounded-xl border border-border bg-white text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
+              </label>
+              <label className="block">
+                <span className="block text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-2">Come now (tokens away)</span>
+                <input type="number" min={1} max={headsUp} value={comeNow} onChange={(e) => setComeNow(Number(e.target.value))} className="w-full px-4 py-3 rounded-xl border border-border bg-white text-[0.9rem] font-bold text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(49,92,255,0.1)] transition" />
+              </label>
             </div>
-            <div className="text-[11.5px] text-ink-3 mb-3">Alerts fire at <span className="num font-semibold text-ink-2">{headsUp}</span> away, <span className="num font-semibold text-ink-2">{comeNow}</span> away, and again when it&apos;s their turn.</div>
-            <button onClick={saveAlerts} className="w-full py-2.5 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark transition">Save alert timing</button>
+            <button onClick={saveAlerts} className="w-full py-3 rounded-xl font-bold text-white transition hover:opacity-90 shadow-md" style={{ background: "#315cff" }}>Save alert timing</button>
           </div>
 
-          <h2 className="font-display font-bold text-ink mb-3">Feature Controls</h2>
+          <h2 className="font-display font-bold text-[1.4rem] text-ink mb-4 mt-8">Feature Controls</h2>
+          
           {toggleGroups.map((g) => (
-            <div key={g.group} className="mb-4">
-              <div className="text-[10.5px] font-bold uppercase tracking-wide text-ink-3 mb-2">{g.group}</div>
-              <div className="flex flex-col gap-2">
-                {g.items.map((it) => (
-                  <div key={it.id} className="flex items-center justify-between gap-3 px-3.5 py-3 rounded-xl bg-surface-2 border border-border">
-                    <div className="flex-1">
-                      <div className="text-[13.5px] font-medium text-ink">{it.label}</div>
-                      <div className="text-[11.5px] text-ink-3 mt-0.5">{it.desc}</div>
+            <div key={g.group} className="mb-6">
+              <div className="text-[0.75rem] font-bold uppercase tracking-wider text-ink-3 mb-3">{g.group}</div>
+              <div className="flex flex-col gap-2.5">
+                {g.items.map((it) => {
+                  const on = toggles[it.id];
+                  return (
+                    <div key={it.id} className="flex items-center justify-between gap-4 px-4 py-3.5 rounded-[16px] bg-white border border-border shadow-sm hover:border-acc/30 transition">
+                      <div className="flex-1">
+                        <div className="text-[0.95rem] font-bold text-ink">{it.label}</div>
+                        <div className="text-[0.8rem] text-ink-3 font-medium mt-0.5">{it.desc}</div>
+                      </div>
+                      <button onClick={() => toggle(it.id, it.label)} role="switch" aria-checked={on}
+                        className="relative w-[48px] h-[28px] rounded-full shrink-0 transition-colors"
+                        style={{ background: on ? "#315cff" : "#dde3f4" }}>
+                        <span className="absolute top-[4px] w-5 h-5 rounded-full bg-white transition-all shadow-md"
+                          style={{ left: on ? "24px" : "4px" }} />
+                      </button>
                     </div>
-                    <Toggle on={toggles[it.id]} onClick={() => toggle(it.id, it.label)} />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
+
         </div>
+
       </div>
 
       {modal && (
@@ -361,7 +389,7 @@ export default function Admin() {
             <Field label="Counters"><input type="number" min={1} className={inputCls} value={form.counters} onChange={(e) => setForm({ ...form, counters: Number(e.target.value) })} /></Field>
             <Field label="Status"><select className={inputCls} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="open">Open</option><option value="busy">Busy</option><option value="closed">Closed</option></select></Field>
           </div>
-          <button onClick={saveBranch} disabled={!form.name.trim()} className="w-full mt-2 py-2.5 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition">{modal.mode === "new" ? "Add branch" : "Save changes"}</button>
+          <button onClick={saveBranch} disabled={!form.name.trim()} className="w-full mt-4 py-3 rounded-xl font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{modal.mode === "new" ? "Add branch" : "Save changes"}</button>
         </Modal>
       )}
 
@@ -373,12 +401,12 @@ export default function Admin() {
             <Field label="Prefix"><input className={inputCls} value={svcForm.prefix} onChange={(e) => setSvcForm({ ...svcForm, prefix: e.target.value })} placeholder="A" maxLength={2} /></Field>
             <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} /></Field>
           </div>
-          <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-2 py-2.5 rounded-xl font-semibold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
+          <button onClick={saveService} disabled={!svcForm.name.trim()} className="w-full mt-4 py-3 rounded-xl font-bold text-white bg-acc hover:bg-acc-dark disabled:opacity-50 transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
         </Modal>
       )}
 
       {toast && (
-        <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-4 py-2.5 rounded-xl text-white text-sm font-semibold z-50 shadow-lg" style={{ background: "#0D1B3E" }}>{toast}</div>
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-5 py-3 rounded-xl text-white text-[0.85rem] font-bold z-50 shadow-[0_10px_30px_rgba(13,27,62,0.4)]" style={{ background: "#0D1B3E" }}>{toast}</div>
       )}
     </main>
   );
@@ -388,18 +416,7 @@ function Metric({ v, l }: { v: string | number; l: string }) {
   return (
     <div>
       <div className="num text-xl font-bold text-ink">{v}</div>
-      <div className="text-[11px] text-ink-3 mt-0.5">{l}</div>
+      <div className="text-[0.7rem] uppercase tracking-wider font-bold text-ink-3 mt-1">{l}</div>
     </div>
-  );
-}
-
-function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
-  return (
-    <button onClick={onClick} role="switch" aria-checked={on}
-      className="relative w-[46px] h-[26px] rounded-full shrink-0 transition-colors"
-      style={{ background: on ? "var(--acc)" : "#D1D5DB" }}>
-      <span className="absolute top-[3px] w-5 h-5 rounded-full bg-white transition-all shadow"
-        style={{ left: on ? "23px" : "3px" }} />
-    </button>
   );
 }
