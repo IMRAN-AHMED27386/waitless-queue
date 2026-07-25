@@ -5,13 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   listenBusinesses, listenAllServices, listenToken, issueToken, cancelToken, saveFeedback,
   waitingOf, paceOf, hasLivePace, ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
-  listenTokensByPhone, BUSINESS_CATEGORIES,
+  listenTokensByPhone, listenCategories, type Category,
   type Biz, type Svc, type Tok,
 } from "@/lib/db";
 import { setupPush, showLocalNotification } from "@/lib/messaging";
 import { countryByCode } from "@/lib/countries";
-
-const categories = ["All", ...BUSINESS_CATEGORIES];
 const WA_NUMBER = process.env.NEXT_PUBLIC_WA_NUMBER ?? "";
 
 type Step = "discover" | "service" | "details" | "token" | "feedback";
@@ -41,6 +39,7 @@ export default function CustomerApp() {
   const [step, setStep] = useState<Step>("discover");
   const [bizList, setBizList] = useState<Biz[]>([]);
   const [svcList, setSvcList] = useState<Svc[]>([]);
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [cat, setCat] = useState("All");
   const [query, setQuery] = useState("");
@@ -56,7 +55,8 @@ export default function CustomerApp() {
   useEffect(() => {
     const u1 = listenBusinesses((b) => { setBizList(b); setLoaded(true); });
     const u2 = listenAllServices(setSvcList);
-    return () => { u1(); u2(); };
+    const u3 = listenCategories(setDbCategories);
+    return () => { u1(); u2(); u3(); };
   }, []);
 
   useEffect(() => {
@@ -261,8 +261,10 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick }: {
       <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="🔍  Search businesses…" className={`${inputStyle} mb-4`} />
       
       <div className="flex gap-2.5 overflow-x-auto pb-2 mb-4 -mx-1 px-1 no-scrollbar">
-        {categories.map((c) => (
-          <button key={c} onClick={() => setCat(c)} 
+        {["All", ...dbCategories.map(c => c.name)].map((c) => (
+          <button
+            key={c}
+            onClick={() => setCat(c)} 
             className={`whitespace-nowrap text-[0.8rem] px-4 py-2 rounded-full border transition shrink-0 ${
               cat === c ? 'font-bold border-acc bg-acc/10 text-acc' : 'font-semibold border-border bg-gray-50 text-ink-3 hover:border-acc hover:text-acc'
             }`}>

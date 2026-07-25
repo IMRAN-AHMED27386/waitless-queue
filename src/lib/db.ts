@@ -45,6 +45,49 @@ export const ALERT_HEADS_UP_DEFAULT = 10;
 export const ALERT_COME_NOW_DEFAULT = 3;
 export const BUSINESS_CATEGORIES = ["Hospitals", "Clinics", "Banks", "Passport Office", "Restaurants"];
 export const CATEGORY_ICON: Record<string, string> = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", "Passport Office": "🛂", Restaurants: "🍽️" };
+
+/* ── Dynamic Categories (Firestore-backed) ── */
+export type Category = { name: string; icon: string };
+
+const DEFAULT_CATS: Category[] = BUSINESS_CATEGORIES.map((c) => ({ name: c, icon: CATEGORY_ICON[c] ?? "🏢" }));
+
+/** Real-time listener on `config/categories`. Seeds defaults if empty. */
+export function listenCategories(cb: (cats: Category[]) => void) {
+  const ref = doc(db, "config", "categories");
+  return onSnapshot(ref, async (snap) => {
+    if (snap.exists()) {
+      const data = snap.data();
+      const list = (data.list ?? []) as Category[];
+      cb(list.length ? list : DEFAULT_CATS);
+    } else {
+      // First time — seed Firestore with defaults
+      try {
+        const { setDoc } = await import("firebase/firestore");
+        await setDoc(ref, { list: DEFAULT_CATS });
+      } catch { /* write may fail for non-super users; fall back silently */ }
+      cb(DEFAULT_CATS);
+    }
+  }, () => cb(DEFAULT_CATS));
+}
+
+export async function addCategory(cat: Category) {
+  const { arrayUnion } = await import("firebase/firestore");
+  return updateDoc(doc(db, "config", "categories"), { list: arrayUnion(cat) });
+}
+
+export async function removeCategory(catName: string) {
+  const snap = await getDoc(doc(db, "config", "categories"));
+  if (!snap.exists()) return;
+  const list = ((snap.data().list ?? []) as Category[]).filter((c) => c.name !== catName);
+  return updateDoc(doc(db, "config", "categories"), { list });
+}
+
+export async function updateCategory(oldName: string, newCat: Category) {
+  const snap = await getDoc(doc(db, "config", "categories"));
+  if (!snap.exists()) return;
+  const list = ((snap.data().list ?? []) as Category[]).map((c) => c.name === oldName ? newCat : c);
+  return updateDoc(doc(db, "config", "categories"), { list });
+}
 export type Svc = {
   id: string; businessId: string; name: string; icon: string; prefix: string;
   currentServing: number; lastIssued: number; avgMins: number;

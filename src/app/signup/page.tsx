@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FirebaseError } from "firebase/app";
 import { Zap, Shield } from "lucide-react";
 import { signUp } from "@/lib/auth";
-import { onboardBusiness, BUSINESS_CATEGORIES } from "@/lib/db";
+import { onboardBusiness, listenCategories, type Category } from "@/lib/db";
 import { DEFAULT_COUNTRIES } from "@/lib/countries";
 
 /* ── Inline styles matching the home-page & login hero design language ── */
@@ -49,7 +49,8 @@ const statusPillStyle: React.CSSProperties = {
 
 export default function Signup() {
   const [businessName, setBusinessName] = useState("");
-  const [category, setCategory] = useState(BUSINESS_CATEGORIES[0]);
+  const [cats, setCats] = useState<Category[]>([]);
+  const [category, setCategory] = useState("");
   const [country, setCountry] = useState(DEFAULT_COUNTRIES[0].code);
   const [location, setLocation] = useState("");
   const [ownerName, setOwnerName] = useState("");
@@ -58,6 +59,13 @@ export default function Signup() {
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    return listenCategories((c) => {
+      setCats(c);
+      setCategory((prev) => prev || (c[0]?.name ?? ""));
+    });
+  }, []);
 
   const valid = businessName.trim() && ownerName.trim() && email.trim() && pw.length >= 6;
 
@@ -188,7 +196,7 @@ export default function Signup() {
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
                   >
-                    {BUSINESS_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                    {cats.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
                   </select>
                 </label>
                 <label className="block">

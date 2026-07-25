@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenBusinesses, addBusiness, updateBusiness, BUSINESS_CATEGORIES, CATEGORY_ICON } from "@/lib/db";
+import { listenBusinesses, addBusiness, updateBusiness, listenCategories, addCategory, removeCategory, updateCategory, type Category } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -30,8 +30,7 @@ const planStyle: Record<string, React.CSSProperties> = {
 const planPrice: Record<string, number> = { free: 0, pro: 49, enterprise: 199 };
 const cap = (s?: string) => (s ? s[0].toUpperCase() + s.slice(1) : "—");
 const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : `${n}`);
-const categories = BUSINESS_CATEGORIES;
-const catIcon = CATEGORY_ICON;
+
 
 const isPaidPlan = (plan?: string) => plan === "pro" || plan === "enterprise";
 const priceFor = (plan?: string, cycle?: string) => planPrice[plan ?? "free"] * (cycle === "yearly" ? 12 : 1);
@@ -70,20 +69,26 @@ export default function Super() {
   const [query, setQuery] = useState("");
   const [plan, setPlan] = useState("All Plans");
   const [modal, setModal] = useState<null | { mode: "new" } | { mode: "manage"; row: Row }>(null);
-  const [form, setForm] = useState({ name: "", category: "Hospitals", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" });
+  const [form, setForm] = useState({ name: "", category: "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" });
   const [toast, setToast] = useState<string | null>(null);
+  const [cats, setCats] = useState<Category[]>([]);
+  const [catModal, setCatModal] = useState<null | { mode: "new" } | { mode: "edit"; original: string }>(null);
+  const [catForm, setCatForm] = useState({ name: "", icon: "🏢" });
 
   useEffect(() => listenBusinesses((b) => { setRows(b as Row[]); setLoaded(true); }), []);
+  useEffect(() => listenCategories(setCats), []);
 
   function flash(m: string) { setToast(m); window.setTimeout(() => setToast(null), 2000); }
-  function openNew() { setForm({ name: "", category: "Hospitals", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" }); setModal({ mode: "new" }); }
+  function openNew() { setForm({ name: "", category: cats[0]?.name ?? "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" }); setModal({ mode: "new" }); }
   function openManage(r: Row) { setForm({ name: r.name, category: r.category, country: r.country ?? "US", location: r.location, plan: r.plan ?? "free", status: r.status ?? "active", billingCycle: r.billingCycle ?? "monthly" }); setModal({ mode: "manage", row: r }); }
   
   async function save() {
     if (modal?.mode === "new") {
       if (!form.name.trim()) return;
       const paidUntil = isPaidPlan(form.plan) && form.status === "active" ? addCycle(new Date(), form.billingCycle).toISOString() : "";
-      await addBusiness({ name: form.name.trim(), category: form.category, categoryIcon: catIcon[form.category] ?? "🏢", logo: catIcon[form.category] ?? "🏢", country: form.country, location: form.location.trim(), plan: form.plan, status: form.status, billingCycle: form.billingCycle, paidUntil, monthlyTokens: 0, likes: 0, distanceKm: 0 });
+      const catObj = cats.find((c) => c.name === form.category);
+      const icon = catObj?.icon ?? "🏢";
+      await addBusiness({ name: form.name.trim(), category: form.category, categoryIcon: icon, logo: icon, country: form.country, location: form.location.trim(), plan: form.plan, status: form.status, billingCycle: form.billingCycle, paidUntil, monthlyTokens: 0, likes: 0, distanceKm: 0 });
       flash("Business onboarded");
     } else if (modal?.mode === "manage") {
       await updateBusiness(modal.row.id, { plan: form.plan, status: form.status, billingCycle: form.billingCycle });
@@ -271,6 +276,25 @@ export default function Super() {
               </table>
             </div>
           </div>
+
+          {/* CATEGORIES MANAGEMENT */}
+          <div className="bg-white border border-border rounded-[24px] p-7 shadow-sm mt-10">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+              <div className="font-display text-[1.4rem] font-bold text-ink">Business Categories</div>
+              <button onClick={() => { setCatForm({ name: "", icon: "🏢" }); setCatModal({ mode: "new" }); }} className="text-[0.85rem] font-bold px-5 py-2.5 rounded-[12px] text-white transition hover:-translate-y-px shadow-[0_8px_20px_rgba(114,9,183,0.2)]" style={{ background: "#7209b7" }}>+ Add Category</button>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              {cats.map((c) => (
+                <div key={c.name} className="flex items-center gap-2.5 bg-surface-2 border border-border rounded-[14px] px-4 py-3 group hover:border-purple/40 transition">
+                  <span className="text-xl">{c.icon}</span>
+                  <span className="text-[0.95rem] font-bold text-ink">{c.name}</span>
+                  <button onClick={() => { setCatForm({ name: c.name, icon: c.icon }); setCatModal({ mode: "edit", original: c.name }); }} className="ml-2 text-[0.75rem] font-bold text-ink-3 hover:text-acc transition opacity-0 group-hover:opacity-100">Edit</button>
+                  <button onClick={async () => { await removeCategory(c.name); flash(`"${c.name}" removed`); }} className="text-[0.75rem] font-bold text-ink-3 hover:text-danger transition opacity-0 group-hover:opacity-100">×</button>
+                </div>
+              ))}
+              {cats.length === 0 && <div className="text-[0.9rem] text-ink-3 font-medium py-4">No categories yet. Add one to get started.</div>}
+            </div>
+          </div>
         </div>
 
       </main>
@@ -282,7 +306,7 @@ export default function Super() {
             <>
               <Field label="Business name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Clinic" /></Field>
               <div className="grid grid-cols-3 gap-4">
-                <Field label="Category"><select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{categories.map((c) => <option key={c}>{c}</option>)}</select></Field>
+              <Field label="Category"><select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}</select></Field>
                 <Field label="Country"><select className={inputCls} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{DEFAULT_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}</select></Field>
                 <Field label="Location"><input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City" /></Field>
               </div>
@@ -354,6 +378,30 @@ export default function Super() {
         </Modal>
       )}
       {toast && <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-6 py-3.5 rounded-[14px] text-white text-[0.9rem] font-bold z-50 shadow-[0_12px_32px_rgba(10,17,40,0.4)] transition-all animate-in slide-in-from-bottom-4" style={{ background: "#1c0a30" }}>{toast}</div>}
+
+      {/* CATEGORY MODAL */}
+      {catModal && (
+        <Modal title={catModal.mode === "new" ? "Add Category" : `Edit Category`} onClose={() => setCatModal(null)}>
+          <Field label="Category name"><input className={inputCls} value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} placeholder="e.g. Salon" /></Field>
+          <Field label="Icon (emoji)"><input className={inputCls} value={catForm.icon} onChange={(e) => setCatForm({ ...catForm, icon: e.target.value })} placeholder="🏢" /></Field>
+          <button
+            onClick={async () => {
+              if (!catForm.name.trim()) return;
+              if (catModal.mode === "new") {
+                await addCategory({ name: catForm.name.trim(), icon: catForm.icon || "🏢" });
+                flash(`"${catForm.name.trim()}" added`);
+              } else {
+                await updateCategory(catModal.original, { name: catForm.name.trim(), icon: catForm.icon || "🏢" });
+                flash(`Category updated`);
+              }
+              setCatModal(null);
+            }}
+            disabled={!catForm.name.trim()}
+            className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white transition shadow-[0_10px_24px_rgba(114,9,183,0.3)] hover:-translate-y-px disabled:opacity-50"
+            style={{ background: "#7209b7" }}
+          >{catModal.mode === "new" ? "Add Category" : "Save Changes"}</button>
+        </Modal>
+      )}
     </div>
   );
 }
