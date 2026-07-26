@@ -558,14 +558,16 @@ export default function Admin() {
       )}
 
       {/* STAFF MODAL */}
-      <Modal show={staffModal} onClose={() => setStaffModal(false)} title="Add Staff Account">
-        <form onSubmit={saveStaff} className="flex flex-col gap-4 mt-2">
-          <Field label="Staff Name"><input className={inputCls} placeholder="e.g. Counter 1" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required /></Field>
-          <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
-          <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
-          <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
-        </form>
-      </Modal>
+      {staffModal && (
+        <Modal onClose={() => setStaffModal(false)} title="Add Staff Account">
+          <form onSubmit={saveStaff} className="flex flex-col gap-4 mt-2">
+            <Field label="Staff Name"><input className={inputCls} placeholder="e.g. Counter 1" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required /></Field>
+            <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
+            <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
+            <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
+          </form>
+        </Modal>
+      )}
 
       {toast && (
         <div className="fixed left-1/2 -translate-x-1/2 bottom-8 px-6 py-3.5 rounded-[14px] text-white text-[0.9rem] font-bold z-50 shadow-[0_12px_32px_rgba(10,17,40,0.4)] transition-all animate-in slide-in-from-bottom-4" style={{ background: "#0a1128" }}>{toast}</div>
