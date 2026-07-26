@@ -47,10 +47,12 @@ service cloud.firestore {
       allow update, delete: if signedIn();
     }
 
-    // Role docs: owner can read their own; writes are server-side only.
+    // Role docs: owner can read/write their own; admins can manage their staff
     match /users/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
-      allow write: if false;
+      allow read: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
+      allow create: if signedIn() && role() in ['admin', 'super'] && request.resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
+      allow delete: if signedIn() && role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
+      allow update: if signedIn() && request.auth.uid == uid;
     }
 
     // Feedback: anyone can submit, only staff/admin can read.
