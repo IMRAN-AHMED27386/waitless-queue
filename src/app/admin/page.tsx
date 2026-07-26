@@ -158,7 +158,11 @@ export default function Admin() {
       flash("Staff account created");
       setStaffModal(false);
     } catch (err: any) {
-      setToast(err.message || "Error creating staff account");
+      if (err.code === "auth/email-already-in-use") {
+        setToast("This email is already registered to an account.");
+      } else {
+        setToast(err.message || "Error creating staff account");
+      }
     }
   }
 
