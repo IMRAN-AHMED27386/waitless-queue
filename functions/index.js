@@ -431,6 +431,35 @@ exports.registerPush = onCall(opts, async (req) => {
   return { ok: true };
 });
 
+// Admin updates a staff/doctor auth account (password/email)
+exports.updateAuthAccount = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign-in required.");
+  const { uid, email, password, displayName } = req.data || {};
+  if (!uid) throw new HttpsError("invalid-argument", "Missing uid.");
+  
+  // Verify caller is admin of the same business
+  const callerSnap = await db.doc(`users/${req.auth.uid}`).get();
+  if (!callerSnap.exists || callerSnap.data().role !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can edit accounts.");
+  }
+  const callerBizId = callerSnap.data().businessId;
+  const targetSnap = await db.doc(`users/${uid}`).get();
+  if (!targetSnap.exists || targetSnap.data().businessId !== callerBizId) {
+    throw new HttpsError("permission-denied", "Target user not found or not in your business.");
+  }
+  
+  const updates = {};
+  if (email && email.trim() !== "") updates.email = email.trim();
+  if (password && password.trim() !== "") updates.password = password.trim();
+  if (displayName && displayName.trim() !== "") updates.displayName = displayName.trim();
+  
+  if (Object.keys(updates).length > 0) {
+    await admin.auth().updateUser(uid, updates);
+  }
+  
+  return { ok: true };
+});
+
 const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };
 
 // A new business owner self-signs-up: they've just created their Firebase Auth

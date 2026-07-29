@@ -15,6 +15,9 @@ import {
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import { createStaffAuthAccount } from "@/lib/auth-secondary";
+import { updateAuthAccount } from "@/lib/db";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import QRCode from "qrcode";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
@@ -72,10 +75,10 @@ export default function Admin() {
   const [roomModal, setRoomModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [roomForm, setRoomForm] = useState({ name: "" });
   const [staff, setStaff] = useState<any[]>([]);
-  const [staffModal, setStaffModal] = useState(false);
+  const [staffModal, setStaffModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [staffForm, setStaffForm] = useState({ name: "", email: "", pass: "" });
   const [doctors, setDoctors] = useState<any[]>([]);
-  const [docModal, setDocModal] = useState(false);
+  const [docModal, setDocModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [docForm, setDocForm] = useState({ name: "", email: "", pass: "" });
 
   useEffect(() => {
@@ -194,39 +197,53 @@ export default function Admin() {
     }
   }
 
+  function openNewStaff() { setStaffForm({ name: "", email: "", pass: "" }); setStaffModal({ mode: "new" }); }
+  function openEditStaff(s: any) { setStaffForm({ name: s.name, email: s.email, pass: "" }); setStaffModal({ mode: "edit", id: s.id }); }
+
   async function saveStaff(e: React.FormEvent) {
     e.preventDefault();
-    if (!staffForm.name.trim() || !staffForm.email.trim() || !staffForm.pass.trim()) return setToast("All fields required");
-    setToast("Creating account...");
+    if (!staffForm.name.trim() || !staffForm.email.trim()) return setToast("Name and Email required");
+    if (staffModal?.mode === "new" && !staffForm.pass.trim()) return setToast("Password required for new account");
+    setToast(staffModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
-      const uid = await createStaffAuthAccount(staffForm.email, staffForm.pass);
-      await addStaffUserRecord(uid, { email: staffForm.email, name: staffForm.name, businessId: bizId });
-      flash("Staff account created");
-      setStaffModal(false);
-    } catch (err: any) {
-      if (err.code === "auth/email-already-in-use") {
-        setToast("This email is already registered to an account.");
-      } else {
-        setToast(err.message || "Error creating staff account");
+      if (staffModal?.mode === "new") {
+        const uid = await createStaffAuthAccount(staffForm.email, staffForm.pass);
+        await addStaffUserRecord(uid, { email: staffForm.email, name: staffForm.name, businessId: bizId });
+        flash("Staff account created");
+      } else if (staffModal?.mode === "edit" && staffModal.id) {
+        await updateAuthAccount({ uid: staffModal.id, email: staffForm.email, password: staffForm.pass || undefined, displayName: staffForm.name });
+        await updateDoc(doc(db, "users", staffModal.id), { name: staffForm.name, email: staffForm.email });
+        flash("Staff account updated");
       }
+      setStaffModal(null);
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") setToast("This email is already registered to an account.");
+      else setToast(err.message || "Error saving staff account");
     }
   }
 
+  function openNewDoctor() { setDocForm({ name: "", email: "", pass: "" }); setDocModal({ mode: "new" }); }
+  function openEditDoctor(d: any) { setDocForm({ name: d.name, email: d.email, pass: "" }); setDocModal({ mode: "edit", id: d.id }); }
+
   async function saveDoctor(e: React.FormEvent) {
     e.preventDefault();
-    if (!docForm.name.trim() || !docForm.email.trim() || !docForm.pass.trim()) return setToast("All fields required");
-    setToast("Creating account...");
+    if (!docForm.name.trim() || !docForm.email.trim()) return setToast("Name and Email required");
+    if (docModal?.mode === "new" && !docForm.pass.trim()) return setToast("Password required for new account");
+    setToast(docModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
-      const uid = await createStaffAuthAccount(docForm.email, docForm.pass);
-      await addDoctorUserRecord(uid, { email: docForm.email, name: docForm.name, businessId: bizId });
-      flash("Doctor account created");
-      setDocModal(false);
-    } catch (err: any) {
-      if (err.code === "auth/email-already-in-use") {
-        setToast("This email is already registered to an account.");
-      } else {
-        setToast(err.message || "Error creating doctor account");
+      if (docModal?.mode === "new") {
+        const uid = await createStaffAuthAccount(docForm.email, docForm.pass);
+        await addDoctorUserRecord(uid, { email: docForm.email, name: docForm.name, businessId: bizId });
+        flash("Doctor account created");
+      } else if (docModal?.mode === "edit" && docModal.id) {
+        await updateAuthAccount({ uid: docModal.id, email: docForm.email, password: docForm.pass || undefined, displayName: docForm.name });
+        await updateDoc(doc(db, "users", docModal.id), { name: docForm.name, email: docForm.email });
+        flash("Doctor account updated");
       }
+      setDocModal(null);
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") setToast("This email is already registered to an account.");
+      else setToast(err.message || "Error saving doctor account");
     }
   }
 
@@ -449,7 +466,7 @@ export default function Admin() {
               <section>
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-display font-bold text-[1.4rem] text-ink">Staff Accounts</h2>
-                  <button onClick={() => { setStaffForm({ name: "", email: "", pass: "" }); setStaffModal(true); }} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Staff</button>
+                  <button onClick={openNewStaff} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Staff</button>
                 </div>
                 <div className="flex flex-col gap-4">
                   {staff.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-6 text-center border border-dashed border-border rounded-[20px]">No staff accounts created.</div>}
@@ -459,12 +476,15 @@ export default function Admin() {
                         <div className="font-display font-bold text-[1.1rem] text-ink">{st.name}</div>
                         <div className="text-[0.85rem] text-ink-3 font-medium">{st.email}</div>
                       </div>
-                      <button onClick={async () => {
-                        if (confirm(`Remove ${st.name}?`)) {
-                          await removeStaffUserRecord(st.id);
-                          flash("Staff removed");
-                        }
-                      }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEditStaff(st)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                        <button onClick={async () => {
+                          if (confirm(`Remove ${st.name}?`)) {
+                            await removeStaffUserRecord(st.id);
+                            flash("Staff removed");
+                          }
+                        }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -474,7 +494,7 @@ export default function Admin() {
               <section>
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="font-display font-bold text-[1.4rem] text-ink">Doctor Accounts</h2>
-                  <button onClick={() => { setDocForm({ name: "", email: "", pass: "" }); setDocModal(true); }} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Doctor</button>
+                  <button onClick={openNewDoctor} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Doctor</button>
                 </div>
                 <div className="flex flex-col gap-4">
                   {doctors.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-6 text-center border border-dashed border-border rounded-[20px]">No doctor accounts created.</div>}
@@ -484,12 +504,15 @@ export default function Admin() {
                         <div className="font-display font-bold text-[1.1rem] text-ink">{doc.name}</div>
                         <div className="text-[0.85rem] text-ink-3 font-medium">{doc.email}</div>
                       </div>
-                      <button onClick={async () => {
-                        if (confirm(`Remove ${doc.name}?`)) {
-                          await removeDoctorUserRecord(doc.id);
-                          flash("Doctor removed");
-                        }
-                      }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEditDoctor(doc)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                        <button onClick={async () => {
+                          if (confirm(`Remove ${doc.name}?`)) {
+                            await removeDoctorUserRecord(doc.id);
+                            flash("Doctor removed");
+                          }
+                        }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -679,26 +702,24 @@ export default function Admin() {
         </Modal>
       )}
 
-      {/* STAFF MODAL */}
       {staffModal && (
-        <Modal onClose={() => setStaffModal(false)} title="Add Staff Account">
-          <form onSubmit={saveStaff} className="flex flex-col gap-4 mt-2">
-            <Field label="Staff Name"><input className={inputCls} placeholder="e.g. Counter 1" value={staffForm.name} onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })} required /></Field>
-            <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
-            <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
-            <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
+        <Modal title={staffModal.mode === "new" ? "New Staff Account" : "Edit Staff Account"} onClose={() => setStaffModal(null)}>
+          <form onSubmit={saveStaff} className="space-y-4">
+            <Field label="Name"><input value={staffForm.name} onChange={e => setStaffForm({ ...staffForm, name: e.target.value })} className={inputCls} placeholder="e.g. Alice" /></Field>
+            <Field label="Email Address"><input value={staffForm.email} onChange={e => setStaffForm({ ...staffForm, email: e.target.value })} className={inputCls} placeholder="alice@example.com" /></Field>
+            <Field label={staffModal.mode === "new" ? "Password" : "New Password (Optional)"}><input type="password" value={staffForm.pass} onChange={e => setStaffForm({ ...staffForm, pass: e.target.value })} className={inputCls} placeholder={staffModal.mode === "new" ? "Min 6 characters" : "Leave blank to keep current"} minLength={staffModal.mode === "new" ? 6 : undefined} /></Field>
+            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Save Staff</button>
           </form>
         </Modal>
       )}
 
-      {/* DOCTOR MODAL */}
       {docModal && (
-        <Modal onClose={() => setDocModal(false)} title="Add Doctor Account">
-          <form onSubmit={saveDoctor} className="flex flex-col gap-4 mt-2">
-            <Field label="Doctor Name"><input className={inputCls} placeholder="e.g. Dr. Smith" value={docForm.name} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} required /></Field>
-            <Field label="Doctor Email"><input type="email" className={inputCls} placeholder="doctor@business.com" value={docForm.email} onChange={(e) => setDocForm({ ...docForm, email: e.target.value })} required /></Field>
-            <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={docForm.pass} onChange={(e) => setDocForm({ ...docForm, pass: e.target.value })} required /></Field>
-            <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Doctor Account</button>
+        <Modal title={docModal.mode === "new" ? "New Doctor Account" : "Edit Doctor Account"} onClose={() => setDocModal(null)}>
+          <form onSubmit={saveDoctor} className="space-y-4">
+            <Field label="Doctor Name"><input value={docForm.name} onChange={e => setDocForm({ ...docForm, name: e.target.value })} className={inputCls} placeholder="e.g. Dr. Smith" /></Field>
+            <Field label="Email Address"><input value={docForm.email} onChange={e => setDocForm({ ...docForm, email: e.target.value })} className={inputCls} placeholder="smith@example.com" /></Field>
+            <Field label={docModal.mode === "new" ? "Password" : "New Password (Optional)"}><input type="password" value={docForm.pass} onChange={e => setDocForm({ ...docForm, pass: e.target.value })} className={inputCls} placeholder={docModal.mode === "new" ? "Min 6 characters" : "Leave blank to keep current"} minLength={docModal.mode === "new" ? 6 : undefined} /></Field>
+            <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl">Save Doctor</button>
           </form>
         </Modal>
       )}

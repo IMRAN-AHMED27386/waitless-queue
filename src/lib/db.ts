@@ -359,6 +359,12 @@ export function removeDoctorUserRecord(uid: string) {
   return deleteDoc(doc(db, "users", uid));
 }
 
+export async function updateAuthAccount(data: { uid: string; email?: string; password?: string; displayName?: string }) {
+  const fn = httpsCallable(functions, "updateAuthAccount");
+  const res = await fn(data);
+  return res.data;
+}
+
 /** Self-signup: creates the caller's business + links their account to it as admin. */
 export async function onboardBusiness(data: { businessName: string; category: string; country?: string; location: string; ownerName: string }) {
   const fn = httpsCallable(functions, "onboardBusiness");
