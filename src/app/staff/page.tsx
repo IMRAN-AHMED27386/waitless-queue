@@ -73,7 +73,7 @@ export default function Staff() {
     window.setTimeout(() => setToast(null), 2200);
   }
 
-  async function advance(kind: "next" | "complete" | "noshow" | "skip") {
+  async function advance(kind: "next" | "noshow") {
     if (busy) return;
     setBusy(true);
     
@@ -85,13 +85,13 @@ export default function Staff() {
     try {
       const num = await advanceQueue(bizId, svcId, user?.name, kind);
       
-      if (kind === "complete" || kind === "next") setServed((n) => n + 1);
-      if (kind === "noshow" || kind === "skip") setSkipped((n) => n + 1);
+      if (kind === "next") setServed((n) => n + 1);
+      if (kind === "noshow") setSkipped((n) => n + 1);
       
       if (num == null) { 
         flash("Queue is empty."); 
       } else {
-        const tag = kind === "noshow" ? "No-show · " : kind === "skip" ? "Skipped · " : "";
+        const tag = kind === "noshow" ? "No-show · " : "";
         flash(`${tag}Now serving ${svc?.prefix}-${num}`);
       }
     } catch (e) {

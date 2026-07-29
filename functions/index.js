@@ -139,7 +139,6 @@ exports.advanceQueue = onCall(opts, async (req) => {
     if (!prevQs.empty) {
       let finalStatus = "completed";
       if (action === "noshow") finalStatus = "no-show";
-      if (action === "skip") finalStatus = "skipped";
       // If it's just "next", we assume the previous was "completed".
       
       batch.update(prevQs.docs[0].ref, {

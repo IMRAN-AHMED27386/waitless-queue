@@ -229,7 +229,7 @@ export async function issueToken(
 }
 
 /** Queue advancement runs server-side (Cloud Function); requires staff auth. */
-export async function advanceQueue(businessId: string, serviceId: string, servedBy?: string, action?: "next" | "complete" | "noshow" | "skip") {
+export async function advanceQueue(businessId: string, serviceId: string, servedBy?: string, action?: "next" | "noshow") {
   const fn = httpsCallable(functions, "advanceQueue");
   const res = await fn({ businessId, serviceId, servedBy: servedBy ?? null, action });
   return (res.data as { num: number | null }).num;
