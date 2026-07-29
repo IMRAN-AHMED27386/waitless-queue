@@ -156,19 +156,21 @@ export default function Admin() {
   async function moveService(index: number, dir: -1 | 1) {
     if (index + dir < 0 || index + dir >= services.length) return;
     
-    // Assign an explicit order to ALL items if they don't have one
-    const updates = services.map((s, i) => ({ id: s.id, order: s.order ?? i }));
+    // Clone array and swap the two items
+    const newList = [...services];
+    const temp = newList[index];
+    newList[index] = newList[index + dir];
+    newList[index + dir] = temp;
     
-    // Swap the two items
-    const temp = updates[index].order;
-    updates[index].order = updates[index + dir].order;
-    updates[index + dir].order = temp;
-    
-    // Only update the two that changed
-    await Promise.all([
-      updateService(bizId, updates[index].id, { order: updates[index].order }),
-      updateService(bizId, updates[index + dir].id, { order: updates[index + dir].order })
-    ]);
+    // Update the DB for any item whose index no longer matches its order
+    // This ensures all items eventually get an explicit, sequential order
+    await Promise.all(
+      newList.map((s, i) => {
+        if (s.order !== i) {
+          return updateService(bizId, s.id, { order: i });
+        }
+      })
+    );
   }
 
   function openNewRoom() { setRoomForm({ name: "" }); setRoomModal({ mode: "new" }); }
