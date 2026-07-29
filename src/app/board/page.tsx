@@ -158,7 +158,7 @@ export default function Board() {
             </div>
 
             {/* Counters Grid */}
-            <div className="grid gap-4 lg:gap-6 flex-1 content-center relative z-10" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-6 flex-1 content-center relative z-10">
               {counters.length === 0 && <div className="col-span-full flex items-center justify-center" style={{ color: "rgba(255,255,255,.4)" }}>No counters configured for this business.</div>}
               {counters.map((s, i) => {
                 const serving = s.currentServing > 0;
