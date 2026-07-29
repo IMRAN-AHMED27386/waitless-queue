@@ -71,7 +71,7 @@ export default function DoctorDashboard() {
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Current Serving */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center min-h-[350px]">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center h-[400px]">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Currently Serving</h2>
           {!user?.roomId ? (
             <div className="text-gray-400">
@@ -98,13 +98,13 @@ export default function DoctorDashboard() {
         </div>
 
         {/* Next in Queue */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col min-h-[350px]">
+        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col h-[400px]">
           <div className="flex justify-between items-end mb-4">
             <h2 className="text-lg font-bold text-gray-800">Up Next</h2>
             <div className="text-sm text-gray-500">{waitingTokens.length} waiting</div>
           </div>
           
-          <div className="flex-1 overflow-y-auto mb-4 space-y-2 max-h-[200px]">
+          <div className="flex-1 overflow-y-auto mb-4 space-y-2">
             {!user?.roomId ? (
               <div className="text-center flex h-full items-center justify-center text-gray-400 py-8">Select a room to view queue</div>
             ) : waitingTokens.length === 0 ? (
