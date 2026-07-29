@@ -41,37 +41,30 @@ export default function DoctorDashboard() {
     router.replace("/login");
   };
 
-  if (!user?.roomId) {
-    return (
-      <div className="p-8 max-w-lg mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Doctor Dashboard</h1>
-          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
-        </div>
-        <p className="mb-4 text-gray-600">You do not have a room assigned. Please select your room for today:</p>
-        <div className="flex flex-col gap-2">
-          {rooms.map(r => (
-            <button key={r.id} onClick={() => handleSelectRoom(r.id)} className="p-4 bg-white rounded-xl shadow text-left hover:bg-gray-50 border">
-              <div className="font-bold">{r.name}</div>
-            </button>
-          ))}
-          {rooms.length === 0 && <p className="text-sm text-gray-500">No rooms available. Ask your admin to create a room.</p>}
-        </div>
-      </div>
-    );
-  }
 
-  const displayRoomName = roomName || "Room";
+
+
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
         <div>
           <h1 className="text-2xl font-bold">Hello, Dr. {user.name || "Doctor"}</h1>
-          <p className="text-gray-500">{displayRoomName}</p>
+          <div className="mt-2">
+            <select 
+              value={user.roomId || ""} 
+              onChange={(e) => handleSelectRoom(e.target.value)}
+              className="text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-100 transition"
+            >
+              <option value="" disabled>-- Select a Room --</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>{r.name}</option>
+              ))}
+            </select>
+            {rooms.length === 0 && <span className="text-xs text-red-500 ml-2">No rooms available.</span>}
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2">
-          <button onClick={() => handleSelectRoom("")} className="text-sm text-blue-600 hover:underline">Change Room</button>
           <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
         </div>
       </div>
@@ -80,7 +73,12 @@ export default function DoctorDashboard() {
         {/* Current Serving */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center min-h-[250px]">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Currently Serving</h2>
-          {currentServing ? (
+          {!user?.roomId ? (
+            <div className="text-gray-400">
+              <div className="text-5xl mb-2">--</div>
+              <div>Please select a room above.</div>
+            </div>
+          ) : currentServing ? (
             <>
               <div className="text-6xl font-black text-gray-900 my-4">{currentServing.number}</div>
               <div className="text-lg text-gray-600 mb-6">{currentServing.customerName || "Patient"}</div>
@@ -107,7 +105,9 @@ export default function DoctorDashboard() {
           </div>
           
           <div className="flex-1 overflow-y-auto mb-4 space-y-2 max-h-[300px]">
-            {waitingTokens.length === 0 ? (
+            {!user?.roomId ? (
+              <div className="text-center text-gray-400 py-8">Select a room to view queue</div>
+            ) : waitingTokens.length === 0 ? (
               <div className="text-center text-gray-400 py-8">Queue is empty</div>
             ) : (
               waitingTokens.map((t) => (
