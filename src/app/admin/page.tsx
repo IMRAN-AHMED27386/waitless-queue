@@ -92,7 +92,7 @@ export default function Admin() {
     if (!bizId) return;
     const u1 = listenBranches(bizId, setBranches);
     const u2 = listenBusinessTokens(bizId, setTokens);
-    const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId)));
+    const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name))));
     const u4 = listenStaff(bizId, setStaff);
     const u5 = listenRooms(bizId, setRooms);
     return () => { u1(); u2(); u3(); u4(); u5(); };
@@ -151,6 +151,24 @@ export default function Admin() {
     if (svcModal?.mode === "new") { await addService(bizId, data); flash("Service added"); }
     else if (svcModal?.mode === "edit") { await updateService(bizId, svcModal.id, data); flash("Service updated"); }
     setSvcModal(null);
+  }
+
+  async function moveService(index: number, dir: -1 | 1) {
+    if (index + dir < 0 || index + dir >= services.length) return;
+    
+    // Assign an explicit order to ALL items if they don't have one
+    const updates = services.map((s, i) => ({ id: s.id, order: s.order ?? i }));
+    
+    // Swap the two items
+    const temp = updates[index].order;
+    updates[index].order = updates[index + dir].order;
+    updates[index + dir].order = temp;
+    
+    // Only update the two that changed
+    await Promise.all([
+      updateService(bizId, updates[index].id, { order: updates[index].order }),
+      updateService(bizId, updates[index + dir].id, { order: updates[index + dir].order })
+    ]);
   }
 
   function openNewRoom() { setRoomForm({ name: "" }); setRoomModal({ mode: "new" }); }
@@ -353,15 +371,19 @@ export default function Admin() {
                 </div>
               </section>
 
-              {/* DEPARTMENTS (SERVICES) */}
+              {/* SERVICES */}
               <section>
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Departments</h2>
-                  <button onClick={openNewSvc} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Department</button>
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Services</h2>
+                  <button onClick={openNewSvc} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Service</button>
                 </div>
                 <div className="flex flex-col gap-4">
-                  {services.map((s) => (
+                  {services.map((s, index) => (
                     <div key={s.id} className="flex items-center gap-4 bg-white border border-border rounded-[20px] p-4 shadow-sm hover:border-acc/30 hover:shadow-md transition-all group">
+                      <div className="flex flex-col gap-1 pr-2 shrink-0 border-r border-border/50">
+                        <button onClick={() => moveService(index, -1)} disabled={index === 0} className="w-6 h-6 grid place-items-center text-ink-3 hover:text-ink hover:bg-surface-2 rounded disabled:opacity-30">▲</button>
+                        <button onClick={() => moveService(index, 1)} disabled={index === services.length - 1} className="w-6 h-6 grid place-items-center text-ink-3 hover:text-ink hover:bg-surface-2 rounded disabled:opacity-30">▼</button>
+                      </div>
                       <span className="grid place-items-center w-14 h-14 rounded-[14px] text-2xl bg-surface-2 border border-border/60 shrink-0 shadow-sm group-hover:scale-105 transition-transform">{s.icon}</span>
                       <div className="flex-1 min-w-0">
                         <div className="font-display font-bold text-[1.1rem] text-ink truncate mb-0.5">{s.name}</div>

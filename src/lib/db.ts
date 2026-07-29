@@ -93,6 +93,7 @@ export type Svc = {
   currentServing: number; lastIssued: number; avgMins: number;
   delayMins?: number; delayAt?: { toDate: () => Date } | null;
   paceMins?: number;
+  order?: number;
 };
 export type JourneyStage = {
   serviceId: string; serviceName: string; number: string;

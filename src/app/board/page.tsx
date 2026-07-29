@@ -37,7 +37,7 @@ export default function Board() {
   useEffect(() => listenAllServices(setServices), []);
 
   const biz = businesses.find((b) => b.id === bizId);
-  const counters = services.filter((s) => s.businessId === bizId);
+  const counters = services.filter((s) => s.businessId === bizId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name));
   const lead = counters[0];
   const upNext = lead && lead.currentServing > 0
     ? Array.from({ length: 5 }, (_, i) => `${lead.prefix}-${lead.currentServing + i + 1}`)
