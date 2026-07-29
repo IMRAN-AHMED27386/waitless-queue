@@ -371,10 +371,13 @@ export function listenDoctorQueue(businessId: string, roomId: string, cb: (t: To
     collection(db, "tokens"),
     where("businessId", "==", businessId),
     where("room", "==", roomId),
-    where("status", "in", ["transferred", "serving_doctor"]),
-    orderBy("numericValue")
+    where("status", "in", ["transferred", "serving_doctor"])
   );
-  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tok)));
+  return onSnapshot(q, (snap) => {
+    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tok);
+    docs.sort((a, b) => a.numericValue - b.numericValue);
+    cb(docs);
+  });
 }
 
 export async function doctorCallToken(tokenId: string) {
