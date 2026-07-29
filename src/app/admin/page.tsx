@@ -431,7 +431,15 @@ export default function Admin() {
                         <div className="font-display font-bold text-[1.1rem] text-ink truncate mb-0.5">{s.name}</div>
                         <div className="text-[0.85rem] text-ink-3 font-medium">Prefix <span className="font-bold text-ink-2 px-1.5 py-0.5 rounded bg-surface border border-border/50">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
                       </div>
-                      <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                        <button onClick={async () => {
+                          if (confirm(`Remove ${s.name}?`)) {
+                            await removeService(bizId!, s.id);
+                            flash("Service deleted");
+                          }
+                        }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -689,15 +697,6 @@ export default function Admin() {
               <Field label="Avg min"><input type="number" min={1} className={inputCls} value={svcForm.avgMins} onChange={(e) => setSvcForm({ ...svcForm, avgMins: Number(e.target.value) })} required /></Field>
             </div>
             <button className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white bg-acc hover:bg-acc-dark transition shadow-md">{svcModal.mode === "new" ? "Add service" : "Save changes"}</button>
-            {svcModal.mode === "edit" && (
-              <button type="button" onClick={async () => {
-                if (confirm("Are you sure you want to delete this service?")) {
-                  await removeService(bizId!, svcModal.id);
-                  setSvcModal(null);
-                  flash("Service deleted");
-                }
-              }} className="w-full mt-3 py-3.5 rounded-[14px] font-bold text-danger border border-danger hover:bg-danger/10 transition shadow-sm">Delete Service</button>
-            )}
           </form>
         </Modal>
       )}
