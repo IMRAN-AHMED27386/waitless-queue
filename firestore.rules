@@ -32,6 +32,14 @@ service cloud.firestore {
         allow read: if true;
         allow write: if signedIn() || true;
       }
+      match /branches/{branchId} {
+        allow read: if true;
+        allow write: if signedIn() && role() in ['admin', 'super'];
+      }
+      match /rooms/{roomId} {
+        allow read: if true;
+        allow write: if signedIn() && role() in ['admin', 'super'];
+      }
     }
 
     // Tokens: anyone can take a token (guest booking) and read the queue;

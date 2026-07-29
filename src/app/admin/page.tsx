@@ -158,10 +158,15 @@ export default function Admin() {
   async function saveRoom(e: React.FormEvent) {
     e.preventDefault();
     if (!roomForm.name.trim()) return setToast("Room name required");
-    const data = { name: roomForm.name.trim() };
-    if (roomModal?.mode === "new") { await addRoom(bizId, data); flash("Room added"); }
-    else if (roomModal?.mode === "edit") { await updateRoom(bizId, roomModal.id, data); flash("Room updated"); }
-    setRoomModal(null);
+    try {
+      const data = { name: roomForm.name.trim() };
+      if (roomModal?.mode === "new") { await addRoom(bizId, data); flash("Room added"); }
+      else if (roomModal?.mode === "edit") { await updateRoom(bizId, roomModal.id, data); flash("Room updated"); }
+      setRoomModal(null);
+    } catch (error: any) {
+      console.error(error);
+      flash("Error: " + (error.message || "Failed to save room"));
+    }
   }
 
   async function saveStaff(e: React.FormEvent) {
@@ -348,11 +353,11 @@ export default function Admin() {
                 </div>
               </section>
 
-              {/* SERVICES */}
+              {/* DEPARTMENTS (SERVICES) */}
               <section>
                 <div className="flex items-center justify-between mb-5">
-                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Services</h2>
-                  <button onClick={openNewSvc} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Service</button>
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Departments</h2>
+                  <button onClick={openNewSvc} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Department</button>
                 </div>
                 <div className="flex flex-col gap-4">
                   {services.map((s) => (
