@@ -75,6 +75,10 @@ export default function Staff() {
 
   async function advance(kind: "next" | "noshow") {
     if (busy) return;
+    
+    // Only increment stats if there was actually someone at the desk
+    const hadCurrent = (svc?.currentServing || 0) > 0;
+    
     setBusy(true);
     
     // Optimistic UI update for instant feedback
@@ -85,8 +89,10 @@ export default function Staff() {
     try {
       const num = await advanceQueue(bizId, svcId, user?.name, kind);
       
-      if (kind === "next") setServed((n) => n + 1);
-      if (kind === "noshow") setSkipped((n) => n + 1);
+      if (hadCurrent) {
+        if (kind === "next") setServed((n) => n + 1);
+        if (kind === "noshow") setSkipped((n) => n + 1);
+      }
       
       if (num == null) { 
         flash("Queue is empty."); 
