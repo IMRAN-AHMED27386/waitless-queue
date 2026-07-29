@@ -226,7 +226,7 @@ async function notifyQueue(businessId, serviceId, C, prevC) {
 // The SAME token doc moves stages, so the customer's live token page follows along.
 exports.transferToken = onCall(opts, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
-  const { businessId, fromServiceId, toServiceId } = req.data || {};
+  const { businessId, fromServiceId, toServiceId, room } = req.data || {};
   if (!businessId || !fromServiceId || !toServiceId || fromServiceId === toServiceId)
     throw new HttpsError("invalid-argument", "Missing or invalid service ids.");
 
@@ -258,12 +258,13 @@ exports.transferToken = onCall(opts, async (req) => {
     tx.update(tokRef, {
       serviceId: toServiceId, prefix: s.prefix, numericValue: next, number,
       status: "waiting", servedBy: null, alertStage: 0,
+      room: room || FieldValue.delete(),
       journey: FieldValue.arrayUnion({
         serviceId: fromServiceId, serviceName: fromSnap.data().name || "",
         number: t.number, servedBy: t.servedBy || null, at: Date.now(),
       }),
     });
-    out = { id: tokRef.id, number, numericValue: next, position: Math.max(1, next - (s.currentServing || 0)), toName: s.name || "" };
+    out = { id: tokRef.id, number, numericValue: next, position: Math.max(1, next - (s.currentServing || 0)), toName: s.name || "", room: room || "" };
   });
 
   // Tell the customer where to go next.
@@ -274,14 +275,14 @@ exports.transferToken = onCall(opts, async (req) => {
         token: tokData.fcmToken,
         notification: {
           title: `Next step: ${out.toName} ➡️`,
-          body: `Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}`,
+          body: `Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}${out.room ? ` Please proceed to ${out.room}.` : ""}`,
         },
         webpush,
       });
     } catch (e) { /* stale token, ignore */ }
   }
   const xferBiz = (await db.doc(`businesses/${businessId}`).get()).data();
-  await waSend(xferBiz, tokData, `➡️ Next step: ${out.toName}. Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}`);
+  await waSend(xferBiz, tokData, `➡️ Next step: ${out.toName}. Your new token is ${out.number} — ${out.position <= 1 ? "you're next!" : `${out.position - 1} ahead of you.`}${out.room ? ` Please proceed to ${out.room}.` : ""}`);
   return out;
 });
 

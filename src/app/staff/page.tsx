@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenQueue, listenService, listenBusiness, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, parkToken, recallToken, listenParked, type Tok, type Svc, type ParkedTok } from "@/lib/db";
+import { listenQueue, listenService, listenBusiness, listenAllServices, advanceQueue, issueToken, transferToken, setDelay, parkToken, recallToken, listenParked, listenRooms, type Tok, type Svc, type ParkedTok, type Room } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import Modal, { Field, inputCls } from "@/components/Modal";
 
@@ -33,6 +33,8 @@ export default function Staff() {
   const [pPriority, setPPriority] = useState("vip");
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferTo, setTransferTo] = useState("");
+  const [transferRoom, setTransferRoom] = useState("");
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [showDelay, setShowDelay] = useState(false);
   const [delayPick, setDelayPick] = useState(15);
   const [parked, setParked] = useState<ParkedTok[]>([]);
@@ -42,7 +44,8 @@ export default function Staff() {
     if (!bizId) return;
     const u1 = listenBusiness(bizId, (b) => setBizName(b?.name ?? "—"));
     const u2 = listenAllServices(setAllServices);
-    return () => { u1(); u2(); };
+    const u3 = listenRooms(bizId, setRooms);
+    return () => { u1(); u2(); u3(); };
   }, [bizId]);
 
   const bizServices = allServices.filter((s) => s.businessId === bizId);
@@ -94,8 +97,9 @@ export default function Staff() {
     if (!transferTo || busy) return;
     setBusy(true);
     try {
-      const r = await transferToken(bizId, svcId, transferTo);
+      const r = await transferToken(bizId, svcId, transferTo, transferRoom || undefined);
       setShowTransfer(false);
+      setTransferRoom("");
       flash(`Sent ${serving} → ${r.toName} as ${r.number}`);
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
@@ -348,14 +352,26 @@ export default function Staff() {
       {showTransfer && (
         <Modal title={`Transfer ${serving} to next stage`} onClose={() => setShowTransfer(false)}>
           <p className="text-[0.85rem] text-ink-3 mb-4">The customer keeps the same live token page — they get a new number in the next queue and a notification telling them where to go.</p>
-          <Field label="Send customer to">
-            <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className={inputCls}>
-              {bizServices.filter((s) => s.id !== svcId).map((s) => (
-                <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
-              ))}
-            </select>
-          </Field>
-          <button onClick={doTransfer} disabled={busy || !transferTo} className="w-full mt-2 py-[14px] rounded-xl text-[0.92rem] font-bold text-white bg-acc hover:bg-acc/90 disabled:opacity-50 transition shadow-sm">
+          <div className="flex flex-col gap-4">
+            <Field label="Send customer to (Department)">
+              <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className={inputCls}>
+                {bizServices.filter((s) => s.id !== svcId).map((s) => (
+                  <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                ))}
+              </select>
+            </Field>
+            {rooms.length > 0 && (
+              <Field label="Specific Room (Optional)">
+                <select value={transferRoom} onChange={(e) => setTransferRoom(e.target.value)} className={inputCls}>
+                  <option value="">-- No specific room --</option>
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.name}>{r.name}</option>
+                  ))}
+                </select>
+              </Field>
+            )}
+          </div>
+          <button onClick={doTransfer} disabled={busy || !transferTo} className="w-full mt-4 py-[14px] rounded-xl text-[0.92rem] font-bold text-white bg-acc hover:bg-acc/90 disabled:opacity-50 transition shadow-sm">
             {busy ? "Transferring…" : "Transfer customer ↗"}
           </button>
         </Modal>

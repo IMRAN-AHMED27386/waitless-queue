@@ -9,7 +9,8 @@ import {
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   listenStaff, addStaffUserRecord, removeStaffUserRecord,
-  type Branch, type HistTok, type Svc, type Biz,
+  listenRooms, addRoom, updateRoom, removeRoom,
+  type Branch, type HistTok, type Svc, type Biz, type Room,
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import { createStaffAuthAccount } from "@/lib/auth-secondary";
@@ -66,6 +67,9 @@ export default function Admin() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [tokens, setTokens] = useState<HistTok[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomModal, setRoomModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
+  const [roomForm, setRoomForm] = useState({ name: "" });
   const [staff, setStaff] = useState<any[]>([]);
   const [staffModal, setStaffModal] = useState(false);
   const [staffForm, setStaffForm] = useState({ name: "", email: "", pass: "" });
@@ -90,7 +94,8 @@ export default function Admin() {
     const u2 = listenBusinessTokens(bizId, setTokens);
     const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId)));
     const u4 = listenStaff(bizId, setStaff);
-    return () => { u1(); u2(); u3(); u4(); };
+    const u5 = listenRooms(bizId, setRooms);
+    return () => { u1(); u2(); u3(); u4(); u5(); };
   }, [bizId]);
 
   const planNow = effectivePlan(bizDoc);
@@ -146,6 +151,17 @@ export default function Admin() {
     if (svcModal?.mode === "new") { await addService(bizId, data); flash("Service added"); }
     else if (svcModal?.mode === "edit") { await updateService(bizId, svcModal.id, data); flash("Service updated"); }
     setSvcModal(null);
+  }
+
+  function openNewRoom() { setRoomForm({ name: "" }); setRoomModal({ mode: "new" }); }
+  function openEditRoom(r: Room) { setRoomForm({ name: r.name }); setRoomModal({ mode: "edit", id: r.id }); }
+  async function saveRoom(e: React.FormEvent) {
+    e.preventDefault();
+    if (!roomForm.name.trim()) return setToast("Room name required");
+    const data = { name: roomForm.name.trim() };
+    if (roomModal?.mode === "new") { await addRoom(bizId, data); flash("Room added"); }
+    else if (roomModal?.mode === "edit") { await updateRoom(bizId, roomModal.id, data); flash("Room updated"); }
+    setRoomModal(null);
   }
 
   async function saveStaff(e: React.FormEvent) {
@@ -347,6 +363,31 @@ export default function Admin() {
                         <div className="text-[0.85rem] text-ink-3 font-medium">Prefix <span className="font-bold text-ink-2 px-1.5 py-0.5 rounded bg-surface border border-border/50">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
                       </div>
                       <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* ROOMS */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Doctor's Rooms</h2>
+                  <button onClick={openNewRoom} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Room</button>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {rooms.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-6 text-center border border-dashed border-border rounded-[20px]">No rooms configured.</div>}
+                  {rooms.map((r) => (
+                    <div key={r.id} className="flex items-center justify-between bg-white border border-border rounded-[20px] p-4 shadow-sm hover:border-acc/30 transition-all">
+                      <div className="font-display font-bold text-[1.1rem] text-ink">{r.name}</div>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => openEditRoom(r)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
+                        <button onClick={async () => {
+                          if (confirm(`Remove ${r.name}?`)) {
+                            await removeRoom(bizId, r.id);
+                            flash("Room removed");
+                          }
+                        }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -569,6 +610,20 @@ export default function Admin() {
             <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
             <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
             <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
+          </form>
+        </Modal>
+      )}
+
+      {roomModal && (
+        <Modal title={roomModal.mode === "new" ? "Add Room" : "Edit Room"} onClose={() => setRoomModal(null)}>
+          <form onSubmit={saveRoom} className="flex flex-col gap-4">
+            <Field label="Room Name (e.g. Room 101, Dr. Smith)">
+              <input value={roomForm.name} onChange={(e) => setRoomForm({ ...roomForm, name: e.target.value })} className={inputCls} placeholder="Room 101" autoFocus />
+            </Field>
+            <div className="flex gap-3 mt-2">
+              <button type="button" onClick={() => setRoomModal(null)} className="flex-1 py-[14px] rounded-xl text-[0.92rem] font-bold border border-border text-ink-2 bg-white hover:bg-surface-2 transition shadow-sm">Cancel</button>
+              <button type="submit" className="flex-1 py-[14px] rounded-xl text-[0.92rem] font-bold text-white bg-acc hover:bg-acc/90 transition shadow-sm">Save</button>
+            </div>
           </form>
         </Modal>
       )}

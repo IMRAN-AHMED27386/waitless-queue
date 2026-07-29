@@ -103,7 +103,7 @@ export type Tok = {
   numericValue: number; number: string; customerName: string; phone: string;
   priority: string; status: string; servedBy?: string | null;
   journey?: JourneyStage[]; parkedAt?: { toDate: () => Date } | null;
-  waCode?: string; waTo?: string;
+  waCode?: string; waTo?: string; room?: string;
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
@@ -142,6 +142,16 @@ export type Branch = {
   inQueue: number; counters: number; avgWait: string;
 };
 
+export type Room = {
+  id: string; businessId: string; name: string;
+};
+
+export function listenRooms(businessId: string, cb: (r: Room[]) => void) {
+  return onSnapshot(collection(db, `businesses/${businessId}/rooms`), (snap) =>
+    cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Room))
+  );
+}
+
 export function listenBranches(businessId: string, cb: (b: Branch[]) => void) {
   return onSnapshot(collection(db, `businesses/${businessId}/branches`), (snap) =>
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Branch))
@@ -158,6 +168,18 @@ export function updateBranch(businessId: string, branchId: string, data: Partial
 
 export function removeBranch(businessId: string, branchId: string) {
   return deleteDoc(doc(db, "businesses", businessId, "branches", branchId));
+}
+
+export function addRoom(businessId: string, data: { name: string }) {
+  return addDoc(collection(db, `businesses/${businessId}/rooms`), { ...data, businessId });
+}
+
+export function updateRoom(businessId: string, roomId: string, data: Partial<Room>) {
+  return updateDoc(doc(db, "businesses", businessId, "rooms", roomId), data);
+}
+
+export function removeRoom(businessId: string, roomId: string) {
+  return deleteDoc(doc(db, "businesses", businessId, "rooms", roomId));
 }
 
 export function addService(businessId: string, data: { name: string; icon: string; prefix: string; avgMins: number }) {
@@ -248,9 +270,9 @@ export async function recallToken(businessId: string, serviceId: string, tokenId
 }
 
 /** Staff moves the customer being served into another service's queue (multi-stage journey). */
-export async function transferToken(businessId: string, fromServiceId: string, toServiceId: string) {
+export async function transferToken(businessId: string, fromServiceId: string, toServiceId: string, room?: string) {
   const fn = httpsCallable(functions, "transferToken");
-  const res = await fn({ businessId, fromServiceId, toServiceId });
+  const res = await fn({ businessId, fromServiceId, toServiceId, room });
   return res.data as { id: string; number: string; numericValue: number; position: number; toName: string };
 }
 

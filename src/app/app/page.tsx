@@ -500,7 +500,12 @@ function TokenView({ biz, issued, onCancel, onDone }: {
       {/* Live Ticket */}
       <div className="relative overflow-hidden rounded-[24px] p-6 text-white shadow-[0_20px_40px_rgba(13,27,62,0.4)]" style={{ background: "linear-gradient(135deg, #0D1B3E 0%, #1A2F70 100%)" }}>
         <div className="text-[0.8rem] font-medium" style={{ color: "rgba(255,255,255,0.7)" }}>{svc.name} &middot; {biz.name}</div>
-        <div className="font-display font-black text-[4.5rem] leading-[1.1] tracking-tight mt-1 mb-2">{number}</div>
+        <div className="font-display font-black text-[4.5rem] leading-[1.1] tracking-tight mt-1 mb-1">{number}</div>
+        {tok?.room && (
+          <div className="inline-block mb-2 px-3 py-1.5 rounded-lg text-[0.85rem] font-bold" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>
+            📍 Proceed to: {tok.room}
+          </div>
+        )}
         
         <span className="inline-flex items-center gap-2 mt-1 text-[0.75rem] font-bold px-3 py-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.9)" }}>
           <span className={`w-2 h-2 rounded-full ${parked ? "bg-[#FDB44B]" : yourTurn ? "bg-[#06D6A0]" : cancelled ? "bg-red-500" : "bg-[#06D6A0] live-dot"}`}></span>
