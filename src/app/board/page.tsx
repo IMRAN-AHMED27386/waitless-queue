@@ -158,7 +158,7 @@ export default function Board() {
             </div>
 
             {/* Counters Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 flex-1 relative z-10">
+            <div className="grid gap-4 lg:gap-6 flex-1 relative z-10" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
               {counters.length === 0 && <div className="col-span-full flex items-center justify-center" style={{ color: "rgba(255,255,255,.4)" }}>No counters configured for this business.</div>}
               {counters.map((s, i) => {
                 const serving = s.currentServing > 0;
@@ -170,7 +170,7 @@ export default function Board() {
                          : { background: "rgba(255,255,255,.03)", border: "1px solid rgba(255,255,255,.05)" }}>
                     
                     <div className="text-[0.85rem] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: "rgba(255,255,255,.5)" }}>Counter {i + 1}</div>
-                    <div className="num text-[5.5rem] font-display font-black leading-none tracking-tighter drop-shadow-lg mb-2" style={{ color: serving ? "#fff" : "rgba(255,255,255,.15)" }}>{token}</div>
+                    <div className="num text-[3.5rem] xl:text-[4.5rem] 2xl:text-[5.5rem] whitespace-nowrap font-display font-black leading-none tracking-tighter drop-shadow-lg mb-2" style={{ color: serving ? "#fff" : "rgba(255,255,255,.15)" }}>{token}</div>
                     <div className="text-[1.2rem] font-medium mb-6" style={{ color: "rgba(255,255,255,.7)" }}>{s.name}</div>
                     
                     <div className="flex items-center justify-center gap-3">
