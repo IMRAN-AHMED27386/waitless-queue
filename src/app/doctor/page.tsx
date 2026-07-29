@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
-import { Tok, listenDoctorQueue, doctorCallToken, doctorCompleteToken, listenRooms, Room } from "@/lib/db";
+import { Tok, listenDoctorQueue, doctorCallToken, doctorCompleteToken, listenRooms, Room, listenAllServices, Svc } from "@/lib/db";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
@@ -12,6 +12,7 @@ export default function DoctorDashboard() {
   const router = useRouter();
   const [tokens, setTokens] = useState<Tok[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [services, setServices] = useState<Svc[]>([]);
   
   useEffect(() => {
     if (!ready || !user?.businessId) return;
@@ -26,10 +27,19 @@ export default function DoctorDashboard() {
     return listenDoctorQueue(user.businessId, roomName, setTokens);
   }, [ready, user?.businessId, roomName]);
 
+  useEffect(() => {
+    if (!ready || !user?.businessId) return;
+    return listenAllServices((all) => setServices(all.filter((s) => s.businessId === user.businessId)));
+  }, [ready, user?.businessId]);
+
   if (!ready) return <div className="p-8 text-center">Loading...</div>;
 
   const currentServing = tokens.find((t) => t.status === "serving_doctor");
   const waitingTokens = tokens.filter((t) => t.status === "transferred");
+
+  const currentServiceName = currentServing 
+    ? services.find((s) => s.id === currentServing.serviceId)?.name || "General Consultation"
+    : "General Consultation";
 
   // If a doctor doesn't have a room assigned, let them select one.
   const handleSelectRoom = async (roomId: string) => {
@@ -98,7 +108,7 @@ export default function DoctorDashboard() {
 
                   <div className="text-center my-[18px]">
                     <h3 className="m-0 text-2xl md:text-[30px] font-bold text-gray-900">{currentServing.customerName || "Patient"}</h3>
-                    <p className="my-1.5 text-slate-500 font-medium">General Consultation</p>
+                    <p className="my-1.5 text-slate-500 font-medium">{currentServiceName}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3 my-5">
