@@ -346,6 +346,19 @@ export function removeStaffUserRecord(uid: string) {
   return deleteDoc(doc(db, "users", uid));
 }
 
+export function listenDoctors(businessId: string, cb: (doctors: any[]) => void) {
+  const q = query(collection(db, "users"), where("businessId", "==", businessId), where("role", "==", "doctor"));
+  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+}
+
+export function addDoctorUserRecord(uid: string, data: { email: string; name: string; businessId: string }) {
+  return setDoc(doc(db, "users", uid), { ...data, role: "doctor" });
+}
+
+export function removeDoctorUserRecord(uid: string) {
+  return deleteDoc(doc(db, "users", uid));
+}
+
 /** Self-signup: creates the caller's business + links their account to it as admin. */
 export async function onboardBusiness(data: { businessName: string; category: string; country?: string; location: string; ownerName: string }) {
   const fn = httpsCallable(functions, "onboardBusiness");

@@ -10,6 +10,7 @@ import {
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   listenStaff, addStaffUserRecord, removeStaffUserRecord,
   listenRooms, addRoom, updateRoom, removeRoom,
+  listenDoctors, addDoctorUserRecord, removeDoctorUserRecord,
   type Branch, type HistTok, type Svc, type Biz, type Room,
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
@@ -73,6 +74,9 @@ export default function Admin() {
   const [staff, setStaff] = useState<any[]>([]);
   const [staffModal, setStaffModal] = useState(false);
   const [staffForm, setStaffForm] = useState({ name: "", email: "", pass: "" });
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [docModal, setDocModal] = useState(false);
+  const [docForm, setDocForm] = useState({ name: "", email: "", pass: "" });
 
   useEffect(() => {
     if (!bizId) return;
@@ -95,7 +99,8 @@ export default function Admin() {
     const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name))));
     const u4 = listenStaff(bizId, setStaff);
     const u5 = listenRooms(bizId, setRooms);
-    return () => { u1(); u2(); u3(); u4(); u5(); };
+    const u6 = listenDoctors(bizId, setDoctors);
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
   }, [bizId]);
 
   const planNow = effectivePlan(bizDoc);
@@ -203,6 +208,24 @@ export default function Admin() {
         setToast("This email is already registered to an account.");
       } else {
         setToast(err.message || "Error creating staff account");
+      }
+    }
+  }
+
+  async function saveDoctor(e: React.FormEvent) {
+    e.preventDefault();
+    if (!docForm.name.trim() || !docForm.email.trim() || !docForm.pass.trim()) return setToast("All fields required");
+    setToast("Creating account...");
+    try {
+      const uid = await createStaffAuthAccount(docForm.email, docForm.pass);
+      await addDoctorUserRecord(uid, { email: docForm.email, name: docForm.name, businessId: bizId });
+      flash("Doctor account created");
+      setDocModal(false);
+    } catch (err: any) {
+      if (err.code === "auth/email-already-in-use") {
+        setToast("This email is already registered to an account.");
+      } else {
+        setToast(err.message || "Error creating doctor account");
       }
     }
   }
@@ -447,6 +470,31 @@ export default function Admin() {
                 </div>
               </section>
 
+              {/* DOCTORS */}
+              <section>
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="font-display font-bold text-[1.4rem] text-ink">Doctor Accounts</h2>
+                  <button onClick={() => { setDocForm({ name: "", email: "", pass: "" }); setDocModal(true); }} className="text-[0.8rem] font-bold text-acc hover:underline">+ Add Doctor</button>
+                </div>
+                <div className="flex flex-col gap-4">
+                  {doctors.length === 0 && <div className="text-[0.9rem] font-medium text-ink-3 py-6 text-center border border-dashed border-border rounded-[20px]">No doctor accounts created.</div>}
+                  {doctors.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between bg-white border border-border rounded-[20px] p-4 shadow-sm hover:border-acc/30 transition-all">
+                      <div>
+                        <div className="font-display font-bold text-[1.1rem] text-ink">{doc.name}</div>
+                        <div className="text-[0.85rem] text-ink-3 font-medium">{doc.email}</div>
+                      </div>
+                      <button onClick={async () => {
+                        if (confirm(`Remove ${doc.name}?`)) {
+                          await removeDoctorUserRecord(doc.id);
+                          flash("Doctor removed");
+                        }
+                      }} className="text-[0.8rem] font-bold text-wn hover:underline">Remove</button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
             </div>
 
             {/* RIGHT COL (Settings & QR) */}
@@ -639,6 +687,18 @@ export default function Admin() {
             <Field label="Staff Email"><input type="email" className={inputCls} placeholder="staff@business.com" value={staffForm.email} onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })} required /></Field>
             <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={staffForm.pass} onChange={(e) => setStaffForm({ ...staffForm, pass: e.target.value })} required /></Field>
             <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Staff Account</button>
+          </form>
+        </Modal>
+      )}
+
+      {/* DOCTOR MODAL */}
+      {docModal && (
+        <Modal onClose={() => setDocModal(false)} title="Add Doctor Account">
+          <form onSubmit={saveDoctor} className="flex flex-col gap-4 mt-2">
+            <Field label="Doctor Name"><input className={inputCls} placeholder="e.g. Dr. Smith" value={docForm.name} onChange={(e) => setDocForm({ ...docForm, name: e.target.value })} required /></Field>
+            <Field label="Doctor Email"><input type="email" className={inputCls} placeholder="doctor@business.com" value={docForm.email} onChange={(e) => setDocForm({ ...docForm, email: e.target.value })} required /></Field>
+            <Field label="Password"><input type="password" minLength={6} className={inputCls} placeholder="At least 6 characters" value={docForm.pass} onChange={(e) => setDocForm({ ...docForm, pass: e.target.value })} required /></Field>
+            <button className="w-full mt-4 py-3.5 rounded-[14px] font-bold text-white transition hover:shadow-lg hover:-translate-y-px" style={{ background: "#315cff" }}>Create Doctor Account</button>
           </form>
         </Modal>
       )}
