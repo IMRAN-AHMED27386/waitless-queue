@@ -49,10 +49,10 @@ export default function DoctorDashboard() {
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
         <div>
-          <h1 className="text-2xl font-bold">Hello, Dr. {user.name || "Doctor"}</h1>
+          <h1 className="text-2xl font-bold">Hello, Dr. {user?.name || "Doctor"}</h1>
           <div className="mt-2">
             <select 
-              value={user.roomId || ""} 
+              value={user?.roomId || ""} 
               onChange={(e) => handleSelectRoom(e.target.value)}
               className="text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-100 transition"
             >
