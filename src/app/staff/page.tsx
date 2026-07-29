@@ -76,13 +76,28 @@ export default function Staff() {
   async function advance(kind: "next" | "complete" | "noshow" | "skip") {
     if (busy) return;
     setBusy(true);
-    const num = await advanceQueue(bizId, svcId, user?.name);
+    
+    // Optimistic UI update for instant feedback
+    const optimisticNext = queue.length > 0 ? queue[0] : null;
+    setSvc((prev) => prev ? { ...prev, currentServing: optimisticNext ? optimisticNext.numericValue : 0 } : prev);
+    if (optimisticNext) setQueue((prev) => prev.filter(t => t.id !== optimisticNext.id));
+
+    try {
+      const num = await advanceQueue(bizId, svcId, user?.name, kind);
+      
+      if (kind === "complete" || kind === "next") setServed((n) => n + 1);
+      if (kind === "noshow" || kind === "skip") setSkipped((n) => n + 1);
+      
+      if (num == null) { 
+        flash("Queue is empty."); 
+      } else {
+        const tag = kind === "noshow" ? "No-show · " : kind === "skip" ? "Skipped · " : "";
+        flash(`${tag}Now serving ${svc?.prefix}-${num}`);
+      }
+    } catch (e) {
+      flash(e instanceof Error ? e.message : "Error advancing queue");
+    }
     setBusy(false);
-    if (num == null) { flash("Queue is empty."); return; }
-    if (kind === "complete") setServed((n) => n + 1);
-    if (kind === "noshow" || kind === "skip") setSkipped((n) => n + 1);
-    const tag = kind === "noshow" ? "No-show · " : kind === "skip" ? "Skipped · " : "";
-    flash(`${tag}Now serving ${svc?.prefix}-${num}`);
   }
 
   function openTransfer() {
@@ -94,12 +109,18 @@ export default function Staff() {
   async function doTransfer() {
     if (!transferRoom || busy) return;
     setBusy(true);
+    
+    // Optimistic UI
+    setSvc((prev) => prev ? { ...prev, currentServing: 0 } : prev);
+
     try {
       const r = await transferToken(bizId, svcId, "", transferRoom);
       setShowTransfer(false);
       setTransferRoom("");
       flash(`Sent ${serving} to ${r.toName}`);
-      await advance("next");
+      
+      // Auto-advance without waiting
+      advanceQueue(bizId, svcId, user?.name, "next").catch(console.error);
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
     }

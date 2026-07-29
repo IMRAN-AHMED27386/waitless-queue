@@ -118,23 +118,55 @@ exports.issueToken = onCall(opts, async (req) => {
 // Staff advances the queue. Requires auth (staff/admin signed in).
 exports.advanceQueue = onCall(opts, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
-  const { businessId, serviceId, servedBy } = req.data || {};
+  const { businessId, serviceId, servedBy, action } = req.data || {};
   if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
+
+  const svcRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
+  const svcSnap = await svcRef.get();
+  const s = svcSnap.exists ? svcSnap.data() : {};
+  const prevServing = s.currentServing || 0;
+  
+  const batch = db.batch();
+
+  // 1. Process the previously serving token based on the action
+  if (prevServing > 0) {
+    const prevQs = await db.collection("tokens")
+      .where("businessId", "==", businessId)
+      .where("serviceId", "==", serviceId)
+      .where("numericValue", "==", prevServing)
+      .limit(1).get();
+      
+    if (!prevQs.empty) {
+      let finalStatus = "completed";
+      if (action === "noshow") finalStatus = "no-show";
+      if (action === "skip") finalStatus = "skipped";
+      // If it's just "next", we assume the previous was "completed".
+      
+      batch.update(prevQs.docs[0].ref, {
+        status: finalStatus,
+        completedAt: FieldValue.serverTimestamp()
+      });
+    }
+  }
+
+  // 2. Find the next token
   const qs = await db.collection("tokens")
     .where("businessId", "==", businessId)
     .where("serviceId", "==", serviceId)
     .where("status", "==", "waiting")
     .orderBy("numericValue").limit(1).get();
-  if (qs.empty) return { num: null };
+
+  // If nobody is waiting, just clear the current serving and commit.
+  if (qs.empty) {
+    batch.update(svcRef, { currentServing: 0 });
+    await batch.commit();
+    return { num: null };
+  }
+
   const d = qs.docs[0];
   const num = d.data().numericValue;
 
-  // Honest ETA: measure the real gap since the previous "call next" and keep a
-  // rolling window of the last 10. Gaps under 30s (demo-clicking) or over 90min
-  // (lunch break / closed) would poison the average, so they're skipped.
-  const svcRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
-  const svcSnap = await svcRef.get();
-  const s = svcSnap.exists ? svcSnap.data() : {};
+  // Honest ETA: measure the real gap since the previous "call next"
   const nowMs = Date.now();
   let gaps = Array.isArray(s.recentGaps) ? s.recentGaps.slice() : [];
   if (s.lastAdvanceAt && typeof s.lastAdvanceAt.toMillis === "function") {
@@ -145,9 +177,7 @@ exports.advanceQueue = onCall(opts, async (req) => {
     ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) * 10) / 10
     : null;
 
-  const prevServing = s.currentServing || 0;
-  const batch = db.batch();
-  batch.update(d.ref, { status: "served", servedBy: servedBy || null, completedAt: FieldValue.serverTimestamp() });
+  batch.update(d.ref, { status: "served", servedBy: servedBy || null });
   batch.update(svcRef, {
     currentServing: num,
     lastAdvanceAt: Timestamp.fromMillis(nowMs),
