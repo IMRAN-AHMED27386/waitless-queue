@@ -227,8 +227,12 @@ async function notifyQueue(businessId, serviceId, C, prevC) {
 exports.transferToken = onCall(opts, async (req) => {
   if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
   const { businessId, fromServiceId, toServiceId, room } = req.data || {};
-  if (!businessId || !fromServiceId || !toServiceId || fromServiceId === toServiceId)
+  if (!businessId || !fromServiceId)
     throw new HttpsError("invalid-argument", "Missing or invalid service ids.");
+  if (toServiceId && fromServiceId === toServiceId)
+    throw new HttpsError("invalid-argument", "Cannot transfer to same service.");
+  if (!toServiceId && !room)
+    throw new HttpsError("invalid-argument", "Must specify either a destination service or a room.");
 
   const fromRef = db.doc(`businesses/${businessId}/services/${fromServiceId}`);
   const toRef = db.doc(`businesses/${businessId}/services/${toServiceId}`);
@@ -246,6 +250,29 @@ exports.transferToken = onCall(opts, async (req) => {
   if (qs.empty) throw new HttpsError("not-found", "Current customer's token not found.");
   const tokRef = qs.docs[0].ref;
 
+  if (!toServiceId && room) {
+    await tokRef.update({
+      room,
+      status: "served",
+      completedAt: FieldValue.serverTimestamp(),
+      servedBy: req.auth.uid
+    });
+    const served = (await tokRef.get()).data();
+    if (served.fcmToken) {
+      try {
+        await admin.messaging().send({
+          token: served.fcmToken,
+          notification: { title: "Please proceed", body: `${served.number} — please proceed to ${room}.` },
+          webpush,
+        });
+      } catch (e) { /* ignore */ }
+    }
+    const bizData = (await db.doc(`businesses/${businessId}`).get()).data();
+    await waSend(bizData, served, `🏥 ${served.number} — please proceed to ${room}.`);
+    return { toName: room, number: served.number };
+  }
+
+  const toRef = db.doc(`businesses/${businessId}/services/${toServiceId}`);
   let out = null;
   await db.runTransaction(async (tx) => {
     const [toSnap, tokSnap] = await Promise.all([tx.get(toRef), tx.get(tokRef)]);

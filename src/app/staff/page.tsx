@@ -86,21 +86,19 @@ export default function Staff() {
   }
 
   function openTransfer() {
-    if (!svc?.currentServing) { flash("No customer is being served yet — call next first."); return; }
-    const others = bizServices.filter((s) => s.id !== svcId);
-    if (!others.length) { flash("No other service to transfer to."); return; }
-    setTransferTo(others[0].id);
+    if (busy) return;
+    if (!svc?.currentServing) { flash("No customer at the counter to transfer."); return; }
     setShowTransfer(true);
   }
 
   async function doTransfer() {
-    if (!transferTo || busy) return;
+    if (!transferRoom || busy) return;
     setBusy(true);
     try {
-      const r = await transferToken(bizId, svcId, transferTo, transferRoom || undefined);
+      const r = await transferToken(bizId, svcId, "", transferRoom);
       setShowTransfer(false);
       setTransferRoom("");
-      flash(`Sent ${serving} → ${r.toName} as ${r.number}`);
+      flash(`Sent ${serving} to ${r.toName}`);
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
     }
@@ -350,29 +348,24 @@ export default function Staff() {
 
       {/* MODALS */}
       {showTransfer && (
-        <Modal title={`Transfer ${serving} to next stage`} onClose={() => setShowTransfer(false)}>
-          <p className="text-[0.85rem] text-ink-3 mb-4">The customer keeps the same live token page — they get a new number in the next queue and a notification telling them where to go.</p>
+        <Modal title={`Send ${serving} to Room`} onClose={() => setShowTransfer(false)}>
+          <p className="text-[0.85rem] text-ink-3 mb-4">The customer will be notified to proceed to the room you select.</p>
           <div className="flex flex-col gap-4">
-            <Field label="Send customer to (Department)">
-              <select value={transferTo} onChange={(e) => setTransferTo(e.target.value)} className={inputCls}>
-                {bizServices.filter((s) => s.id !== svcId).map((s) => (
-                  <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
-                ))}
-              </select>
-            </Field>
-            {rooms.length > 0 && (
-              <Field label="Specific Room (Optional)">
+            {rooms.length > 0 ? (
+              <Field label="Select Room">
                 <select value={transferRoom} onChange={(e) => setTransferRoom(e.target.value)} className={inputCls}>
-                  <option value="">-- No specific room --</option>
+                  <option value="">-- Choose a room --</option>
                   {rooms.map((r) => (
                     <option key={r.id} value={r.name}>{r.name}</option>
                   ))}
                 </select>
               </Field>
+            ) : (
+              <div className="text-[0.85rem] text-ink-3 p-4 bg-surface-2 rounded-xl text-center">No rooms configured. Add rooms in the Admin dashboard first.</div>
             )}
           </div>
-          <button onClick={doTransfer} disabled={busy || !transferTo} className="w-full mt-4 py-[14px] rounded-xl text-[0.92rem] font-bold text-white bg-acc hover:bg-acc/90 disabled:opacity-50 transition shadow-sm">
-            {busy ? "Transferring…" : "Transfer customer ↗"}
+          <button onClick={doTransfer} disabled={busy || !transferRoom} className="w-full mt-4 py-[14px] rounded-xl text-[0.92rem] font-bold text-white bg-acc hover:bg-acc/90 disabled:opacity-50 transition shadow-sm">
+            {busy ? "Sending…" : "Send to Room ↗"}
           </button>
         </Modal>
       )}
