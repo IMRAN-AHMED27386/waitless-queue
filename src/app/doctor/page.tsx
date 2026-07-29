@@ -22,6 +22,7 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     if (!ready || !user?.businessId || !roomName) return;
+    setTokens([]); // Clear tokens instantly on room switch to prevent blinking
     return listenDoctorQueue(user.businessId, roomName, setTokens);
   }, [ready, user?.businessId, roomName]);
 
