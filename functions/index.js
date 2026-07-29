@@ -235,7 +235,6 @@ exports.transferToken = onCall(opts, async (req) => {
     throw new HttpsError("invalid-argument", "Must specify either a destination service or a room.");
 
   const fromRef = db.doc(`businesses/${businessId}/services/${fromServiceId}`);
-  const toRef = db.doc(`businesses/${businessId}/services/${toServiceId}`);
   const fromSnap = await fromRef.get();
   if (!fromSnap.exists) throw new HttpsError("not-found", "Service not found.");
   const cur = fromSnap.data().currentServing || 0;

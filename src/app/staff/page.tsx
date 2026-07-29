@@ -99,6 +99,7 @@ export default function Staff() {
       setShowTransfer(false);
       setTransferRoom("");
       flash(`Sent ${serving} to ${r.toName}`);
+      await advance("next");
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
     }
