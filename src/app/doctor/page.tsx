@@ -47,10 +47,13 @@ export default function DoctorDashboard() {
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
+      <div className="flex justify-between items-start bg-white p-4 rounded-xl shadow-sm border">
         <div>
-          <h1 className="text-2xl font-bold">Hello, Dr. {user?.name || "Doctor"}</h1>
-          <div className="mt-2">
+          <h1 className="text-2xl font-bold mt-1">Hello, Dr. {user?.name || "Doctor"}</h1>
+        </div>
+        <div className="flex flex-col items-end gap-3">
+          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
+          <div className="flex flex-col items-end">
             <select 
               value={user?.roomId || ""} 
               onChange={(e) => handleSelectRoom(e.target.value)}
@@ -61,11 +64,8 @@ export default function DoctorDashboard() {
                 <option key={r.id} value={r.id}>{r.name}</option>
               ))}
             </select>
-            {rooms.length === 0 && <span className="text-xs text-red-500 ml-2">No rooms available.</span>}
+            {rooms.length === 0 && <span className="text-xs text-red-500 mt-1">No rooms available.</span>}
           </div>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
         </div>
       </div>
 

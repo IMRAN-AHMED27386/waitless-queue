@@ -60,7 +60,7 @@ service cloud.firestore {
       allow read: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
       allow create: if signedIn() && role() in ['admin', 'super'] && request.resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
       allow delete: if signedIn() && role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
-      allow update: if signedIn() && request.auth.uid == uid;
+      allow update: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
     }
 
     // Feedback: anyone can submit, only staff/admin can read.
