@@ -23,21 +23,52 @@ export default function Staff() {
   const [allServices, setAllServices] = useState<Svc[]>([]);
   const [svc, setSvc] = useState<Svc | null>(null);
   const [queue, setQueue] = useState<Tok[]>([]);
+  const [parked, setParked] = useState<ParkedTok[]>([]);
+  
+  // Daily Stats stored in LocalStorage so they survive refreshes and department changes!
+  const [stats, setStats] = useState({ served: 0, skipped: 0 });
+
+  useEffect(() => {
+    if (!user?.name || !svcId) return;
+    const today = new Date().toDateString();
+    const stored = localStorage.getItem(`waitless_staff_stats_${user.name}_${svcId}`);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.date === today) {
+          setStats({ served: parsed.served || 0, skipped: parsed.skipped || 0 });
+          return;
+        }
+      } catch (e) {}
+    }
+    // Reset if no data for today for this specific department
+    setStats({ served: 0, skipped: 0 });
+  }, [user?.name, svcId]);
+
+  function updateStats(type: "served" | "skipped") {
+    setStats(prev => {
+      const next = { ...prev, [type]: prev[type] + 1 };
+      if (user?.name && svcId) {
+        localStorage.setItem(`waitless_staff_stats_${user.name}_${svcId}`, JSON.stringify({
+          date: new Date().toDateString(),
+          ...next
+        }));
+      }
+      return next;
+    });
+  }
+
   const [filter, setFilter] = useState("All");
   const [toast, setToast] = useState<string | null>(null);
-  const [served, setServed] = useState(0);
-  const [skipped, setSkipped] = useState(0);
   const [busy, setBusy] = useState(false);
   const [query, setQuery] = useState("");
   const [pName, setPName] = useState("");
   const [pPriority, setPPriority] = useState("vip");
   const [showTransfer, setShowTransfer] = useState(false);
-  const [transferTo, setTransferTo] = useState("");
   const [transferRoom, setTransferRoom] = useState("");
   const [rooms, setRooms] = useState<Room[]>([]);
   const [showDelay, setShowDelay] = useState(false);
   const [delayPick, setDelayPick] = useState(15);
-  const [parked, setParked] = useState<ParkedTok[]>([]);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -56,7 +87,6 @@ export default function Staff() {
 
   useEffect(() => {
     if (!bizId || !svcId) return;
-    setServed(0); setSkipped(0);
     const u1 = listenService(bizId, svcId, setSvc);
     const u2 = listenQueue(bizId, svcId, setQueue);
     const u3 = listenParked(bizId, svcId, setParked);
@@ -90,8 +120,8 @@ export default function Staff() {
       const num = await advanceQueue(bizId, svcId, user?.name, kind);
       
       if (hadCurrent) {
-        if (kind === "next") setServed((n) => n + 1);
-        if (kind === "noshow") setSkipped((n) => n + 1);
+        if (kind === "next") updateStats("served");
+        if (kind === "noshow") updateStats("skipped");
       }
       
       if (num == null) { 
@@ -360,11 +390,11 @@ export default function Staff() {
               </div>
 
               <div className="bg-white border border-border rounded-[20px] p-5 shadow-sm">
-                <div className="font-display font-bold text-[1.1rem] text-ink mb-4">This session</div>
+                <div className="text-ink font-bold font-display text-[1.1rem] mb-5">Today's Performance</div>
                 <div className="grid grid-cols-3 gap-2 text-center">
-                  <Stat n={served} l="Served" color="#0e1726" />
-                  <Stat n={skipped} l="Skipped" color="#ef233c" />
-                  <Stat n={`${queue.length}`} l="Waiting" color="#06d6a0" />
+                  <Stat n={stats.served} l="Served" color="#0e1726" />
+                  <Stat n={stats.skipped} l="Skipped" color="#ef233c" />
+                  <Stat n={queue.length} l="Waiting" color="#06d6a0" />
                 </div>
               </div>
             </div>
