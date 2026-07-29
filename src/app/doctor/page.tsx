@@ -16,10 +16,12 @@ export default function DoctorDashboard() {
     return listenRooms(user.businessId, setRooms);
   }, [ready, user?.businessId]);
 
+  const roomName = rooms.find((r) => r.id === user?.roomId)?.name;
+
   useEffect(() => {
-    if (!ready || !user?.businessId || !user?.roomId) return;
-    return listenDoctorQueue(user.businessId, user.roomId, setTokens);
-  }, [ready, user?.businessId, user?.roomId]);
+    if (!ready || !user?.businessId || !roomName) return;
+    return listenDoctorQueue(user.businessId, roomName, setTokens);
+  }, [ready, user?.businessId, roomName]);
 
   if (!ready) return <div className="p-8 text-center">Loading...</div>;
 
@@ -49,14 +51,14 @@ export default function DoctorDashboard() {
     );
   }
 
-  const roomName = rooms.find((r) => r.id === user.roomId)?.name || "Room";
+  const displayRoomName = roomName || "Room";
 
   return (
     <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
       <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
         <div>
           <h1 className="text-2xl font-bold">Hello, Dr. {user.name || "Doctor"}</h1>
-          <p className="text-gray-500">{roomName}</p>
+          <p className="text-gray-500">{displayRoomName}</p>
         </div>
         <button onClick={() => handleSelectRoom("")} className="text-sm text-blue-600 underline">Change Room</button>
       </div>
