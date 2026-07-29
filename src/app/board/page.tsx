@@ -158,7 +158,7 @@ export default function Board() {
             </div>
 
             {/* Counters Grid */}
-            <div className="grid gap-4 lg:gap-6 flex-1 relative z-10" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
+            <div className="grid gap-4 lg:gap-6 flex-1 content-center relative z-10" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))" }}>
               {counters.length === 0 && <div className="col-span-full flex items-center justify-center" style={{ color: "rgba(255,255,255,.4)" }}>No counters configured for this business.</div>}
               {counters.map((s, i) => {
                 const serving = s.currentServing > 0;
@@ -187,19 +187,19 @@ export default function Board() {
             {/* Footer info area */}
             <div className="mt-8 flex items-center justify-between gap-6 relative z-10">
               
-              <div className="bg-white/5 border border-white/10 rounded-[16px] px-6 py-5 flex-1 flex items-center gap-5 backdrop-blur-md">
-                <div className="text-[0.8rem] font-bold uppercase tracking-[0.15em] text-white/40 whitespace-nowrap">Up Next <span className="text-white/20">|</span> {lead?.name ?? ""}</div>
-                <div className="flex gap-3 flex-wrap">
-                  {upNext.length === 0 && <span className="text-[0.95rem] text-white/30 font-medium">No one waiting in this queue</span>}
+              <div className="bg-white/5 border border-white/10 rounded-[24px] px-8 py-8 flex-1 flex items-center gap-6 backdrop-blur-md">
+                <div className="text-[1.4rem] font-bold uppercase tracking-[0.15em] text-white/40 whitespace-nowrap">Up Next <span className="text-white/20">|</span> {lead?.name ?? ""}</div>
+                <div className="flex gap-4 flex-wrap">
+                  {upNext.length === 0 && <span className="text-[1.6rem] text-white/30 font-medium">No one waiting in this queue</span>}
                   {upNext.map((t, i) => (
-                    <span key={t} className="num text-[1.1rem] font-bold px-4 py-1.5 rounded-[10px]" style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.9)", opacity: 1 - (i * 0.15) }}>{t}</span>
+                    <span key={t} className="num text-[1.8rem] font-bold px-6 py-2 rounded-[14px]" style={{ background: "rgba(255,255,255,.1)", color: "rgba(255,255,255,.9)", opacity: 1 - (i * 0.15) }}>{t}</span>
                   ))}
                 </div>
               </div>
               
-              <div className="bg-[#315cff]/20 border border-[#315cff]/30 rounded-[16px] px-6 py-5 flex items-center gap-3 backdrop-blur-md shrink-0">
-                <span className="text-xl">📢</span>
-                <span className="text-[0.95rem] font-bold text-[#e2e8ff] tracking-wide">Please proceed to your counter when your number is called</span>
+              <div className="bg-[#315cff]/20 border border-[#315cff]/30 rounded-[24px] px-8 py-8 flex items-center gap-5 backdrop-blur-md shrink-0">
+                <span className="text-4xl">📢</span>
+                <span className="text-[1.6rem] font-bold text-[#e2e8ff] tracking-wide">Please proceed to your counter when your number is called</span>
               </div>
 
             </div>
