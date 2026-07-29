@@ -1,0 +1,56 @@
+
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Doctor Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#edf3fa;font-family:Inter,sans-serif;color:#1f2937;padding:18px}
+.wrap{max-width:1180px;margin:auto}.top,.card{background:#fff;border-radius:22px;box-shadow:0 10px 30px rgba(0,0,0,.08)}
+.top{display:flex;justify-content:space-between;align-items:center;padding:24px 28px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:22px}.card{padding:24px}
+.live{color:#16a34a;font-weight:700}.logout{color:#ef4444;font-weight:700;text-decoration:none}.room{margin-top:10px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.badge{background:#ecfdf5;color:#16a34a;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
+.tokenbox{background:linear-gradient(135deg,#2563eb,#3b82f6);border-radius:18px;color:#fff;text-align:center;padding:18px;max-width:240px;margin:0 auto;box-shadow:0 12px 28px rgba(37,99,235,.28)}
+.tokenbox small{display:block;opacity:.9;letter-spacing:2px}.tokenbox h1{margin:10px 0 0;font-size:58px}
+.name{text-align:center;margin:18px 0}.name h3{margin:0;font-size:30px}.name p{margin:6px 0;color:#64748b}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.info div{background:#f8fafc;border:1px solid #e5e7eb;border-radius:14px;padding:14px}
+.info label{display:block;font-size:11px;color:#94a3b8;text-transform:uppercase}.info b{font-size:18px}
+.complete{width:100%;padding:15px;border:0;border-radius:14px;background:#16a34a;color:#fff;font-weight:700}
+ul{list-style:none;padding:0}li{display:flex;justify-content:space-between;padding:14px 6px;border-bottom:1px solid #eee}#next{width:100%;padding:16px;border:0;border-radius:14px;background:#2563eb;color:#fff;font-weight:700}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<div class="wrap">
+<div class="top"><div><div style="color:#64748b">Doctor Dashboard</div><h1>Hello, Dr. John 101</h1><div class="live">● Online</div></div>
+<div><a class="logout" href="#">Sign Out</a><div class="room"><select id="room"></select></div></div></div>
+<div class="grid">
+<div class="card">
+<div class="head"><h2>Currently Serving</h2><span class="badge">LIVE</span></div>
+<div class="tokenbox"><small>CURRENT TOKEN</small><h1 id="tok"></h1></div>
+<div class="name"><h3 id="pname"></h3><p>General Consultation</p></div>
+<div class="info">
+<div><label>Arrival</label><b id="arr"></b></div>
+<div><label>Waiting</label><b id="wait"></b></div>
+<div><label>Room</label><b id="rm"></b></div>
+<div><label>Status</label><b style="color:#16a34a">Inside Consultation</b></div>
+</div>
+<button class="complete">✓ Complete Consultation</button>
+</div>
+<div class="card">
+<div class="head"><h2>Up Next</h2><span id="count"></span></div>
+<ul id="list"></ul>
+<button id="next" onclick="callNext()">Call Next Patient</button>
+</div>
+</div></div>
+<script>
+const data={
+"Room 101":{c:{t:"A-021",n:"Ahmed Ali",a:"09:10 AM",w:"12 mins"},q:[["A-022","Fatima"],["A-023","Mohammed"],["A-024","Sarah"]]},
+"Room 102":{c:{t:"B-104",n:"Ali Shifan",a:"09:41 AM",w:"18 mins"},q:[["B-105","Mariyam Ahmed"],["B-106","Hussain Ali"]]},
+"Room 103":{c:{t:"C-201",n:"Aisha Ahmed",a:"10:05 AM",w:"5 mins"},q:[["C-202","Mohamed"],["C-203","Adam"],["C-204","Ibrahim"]]}
+};
+const s=document.getElementById('room');
+Object.keys(data).forEach(r=>s.add(new Option(r,r)));
+function render(){let d=data[s.value];tok.textContent=d.c.t;pname.textContent=d.c.n;arr.textContent=d.c.a;wait.textContent=d.c.w;rm.textContent=s.value.split(" ")[1];count.textContent=d.q.length+" Waiting";list.innerHTML="";d.q.forEach(x=>list.innerHTML+=`<li><b>${x[0]}</b><span>${x[1]}</span></li>`);}
+function callNext(){let d=data[s.value];if(!d.q.length)return;let x=d.q.shift();d.c={t:x[0],n:x[1],a:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),w:"0 mins"};render();}
+s.onchange=render;s.value="Room 102";render();
+</script></body></html>

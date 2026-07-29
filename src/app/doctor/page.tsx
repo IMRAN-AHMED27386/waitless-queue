@@ -47,94 +47,125 @@ export default function DoctorDashboard() {
 
 
   return (
-    <div className="p-4 md:p-8 max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-start bg-white p-4 rounded-xl shadow-sm border">
-        <div>
-          <h1 className="text-2xl font-bold mt-1">Hello, Dr. {user?.name || "Doctor"}</h1>
-        </div>
-        <div className="flex flex-col items-end gap-3">
-          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
-          <div className="flex flex-col items-end">
-            <select 
-              value={user?.roomId || ""} 
-              onChange={(e) => handleSelectRoom(e.target.value)}
-              className="text-gray-700 bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-100 transition"
-            >
-              <option value="" disabled>-- Select a Room --</option>
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
-            {rooms.length === 0 && <span className="text-xs text-red-500 mt-1">No rooms available.</span>}
+    <div className="bg-[#edf3fa] min-h-screen p-4 md:p-5 font-sans text-gray-800">
+      <div className="max-w-[1180px] mx-auto">
+        {/* Top Header */}
+        <div className="bg-white rounded-[22px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-6 md:px-7 flex flex-col md:flex-row justify-between items-center mb-5 gap-4">
+          <div>
+            <div className="text-slate-500 font-medium text-sm mb-1">Doctor Dashboard</div>
+            <h1 className="text-2xl md:text-3xl font-bold m-0 text-gray-900">Hello, Dr. {user?.name || "Doctor"}</h1>
+            <div className="text-green-600 font-bold mt-1 text-sm">● Online</div>
           </div>
-        </div>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Current Serving */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col items-center justify-center text-center h-[400px]">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-2">Currently Serving</h2>
-          {!user?.roomId ? (
-            <div className="text-gray-400">
-              <div className="text-5xl mb-2">--</div>
-              <div>Please select a room above.</div>
-            </div>
-          ) : currentServing ? (
-            <>
-              <div className="text-6xl font-black text-gray-900 my-4">{currentServing.number}</div>
-              <div className="text-lg text-gray-600 mb-6">{currentServing.customerName || "Patient"}</div>
-              <button 
-                onClick={() => doctorCompleteToken(currentServing.id)}
-                className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-green-700"
+          <div className="flex flex-col items-end gap-3">
+            <button onClick={handleSignOut} className="text-red-500 font-bold hover:underline">Sign Out</button>
+            <div className="mt-1">
+              <select 
+                value={user?.roomId || ""} 
+                onChange={(e) => handleSelectRoom(e.target.value)}
+                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-medium outline-none cursor-pointer hover:bg-gray-100 transition"
               >
-                Complete Consultation
-              </button>
-            </>
-          ) : (
-             <div className="text-gray-400">
-               <div className="text-5xl mb-2">--</div>
-               <div>No one is currently inside.</div>
-             </div>
-          )}
+                <option value="" disabled>-- Select a Room --</option>
+                {rooms.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Next in Queue */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border flex flex-col h-[400px]">
-          <div className="flex justify-between items-end mb-4">
-            <h2 className="text-lg font-bold text-gray-800">Up Next</h2>
-            <div className="text-sm text-gray-500">{waitingTokens.length} waiting</div>
-          </div>
+        {/* Grid Layout */}
+        <div className="grid md:grid-cols-2 gap-[22px]">
           
-          <div className="flex-1 overflow-y-auto mb-4 space-y-2">
+          {/* Currently Serving Card */}
+          <div className="bg-white rounded-[22px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-6 flex flex-col h-[480px]">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-xl font-bold m-0 text-gray-900">Currently Serving</h2>
+              <span className="bg-emerald-50 text-green-600 px-3 py-1 rounded-full text-[13px] font-bold uppercase tracking-wider">Live</span>
+            </div>
+
             {!user?.roomId ? (
-              <div className="text-center flex h-full items-center justify-center text-gray-400 py-8">Select a room to view queue</div>
-            ) : waitingTokens.length === 0 ? (
-              <div className="text-center flex h-full items-center justify-center text-gray-400 py-8">Queue is empty</div>
-            ) : (
-              waitingTokens.map((t) => (
-                <div key={t.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <div>
-                    <div className="font-bold text-gray-900">{t.number}</div>
-                    <div className="text-sm text-gray-600">{t.customerName || "Patient"}</div>
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <div className="text-5xl mb-2">--</div>
+                <div className="font-medium">Please select a room above.</div>
+              </div>
+            ) : currentServing ? (
+              <div className="flex flex-col flex-1 justify-between">
+                <div>
+                  <div className="bg-gradient-to-br from-blue-600 to-blue-500 rounded-[18px] text-white text-center p-[18px] max-w-[240px] mx-auto shadow-[0_12px_28px_rgba(37,99,235,0.28)]">
+                    <small className="block opacity-90 tracking-[2px] text-[10px] md:text-xs font-semibold uppercase">Current Token</small>
+                    <h1 className="mt-2.5 mb-0 text-[48px] md:text-[58px] font-black leading-none">{currentServing.number}</h1>
                   </div>
-                  <div className="text-xs text-gray-400">
-                    Waiting
+
+                  <div className="text-center my-[18px]">
+                    <h3 className="m-0 text-2xl md:text-[30px] font-bold text-gray-900">{currentServing.customerName || "Patient"}</h3>
+                    <p className="my-1.5 text-slate-500 font-medium">General Consultation</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 my-5">
+                    <div className="bg-slate-50 border border-gray-200 rounded-[14px] p-3.5">
+                      <label className="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Arrival</label>
+                      <b className="text-lg font-bold text-gray-800">--</b>
+                    </div>
+                    <div className="bg-slate-50 border border-gray-200 rounded-[14px] p-3.5">
+                      <label className="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Status</label>
+                      <b className="text-lg font-bold text-green-600 whitespace-nowrap">Inside Consultation</b>
+                    </div>
                   </div>
                 </div>
-              ))
+
+                <button 
+                  onClick={() => doctorCompleteToken(currentServing.id)}
+                  className="w-full py-4 rounded-[14px] bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] transition shadow-sm"
+                >
+                  ✓ Complete Consultation
+                </button>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <div className="text-5xl mb-2">--</div>
+                <div className="font-medium">No one is currently inside.</div>
+              </div>
             )}
           </div>
 
-          <button 
-            disabled={waitingTokens.length === 0 || !!currentServing}
-            onClick={() => doctorCallToken(waitingTokens[0].id)}
-            className="w-full bg-blue-600 disabled:bg-gray-300 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition"
-          >
-            Call Next Patient
-          </button>
-          {currentServing && waitingTokens.length > 0 && (
-             <p className="text-xs text-center text-gray-500 mt-2">Complete current patient to call the next.</p>
-          )}
+          {/* Up Next Card */}
+          <div className="bg-white rounded-[22px] shadow-[0_10px_30px_rgba(0,0,0,0.08)] p-6 flex flex-col h-[480px]">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-xl font-bold m-0 text-gray-900">Up Next</h2>
+              <span className="text-gray-500 font-medium text-sm">{waitingTokens.length} Waiting</span>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto mb-5 pr-2">
+              {!user?.roomId ? (
+                <div className="h-full flex items-center justify-center text-gray-400 font-medium">Select a room to view queue</div>
+              ) : waitingTokens.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-400 font-medium">Queue is empty</div>
+              ) : (
+                <ul className="list-none p-0 m-0">
+                  {waitingTokens.map((t) => (
+                    <li key={t.id} className="flex justify-between items-center py-3.5 px-2 border-b border-gray-100 last:border-0">
+                      <b className="text-gray-900 font-bold">{t.number}</b>
+                      <span className="text-slate-600 font-medium">{t.customerName || "Patient"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-auto pt-2">
+              <button 
+                disabled={waitingTokens.length === 0 || !!currentServing}
+                onClick={() => doctorCallToken(waitingTokens[0].id)}
+                className="w-full py-4 rounded-[14px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-[15px] transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Call Next Patient
+              </button>
+              {currentServing && waitingTokens.length > 0 && (
+                <p className="text-xs text-center text-gray-400 mt-2 font-medium">Complete current patient to call the next.</p>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
