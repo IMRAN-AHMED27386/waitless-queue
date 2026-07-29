@@ -6,7 +6,7 @@ import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-export type AppUser = { uid: string; email: string | null; role: string; name?: string; businessId?: string };
+export type AppUser = { uid: string; email: string | null; role: string; name?: string; businessId?: string; roomId?: string };
 
 export function signIn(email: string, password: string) {
   return signInWithEmailAndPassword(auth, email, password);
@@ -31,7 +31,7 @@ export async function getRole(uid: string): Promise<string> {
 }
 
 export function homeFor(role: string) {
-  return role === "super" ? "/super" : role === "staff" ? "/staff" : role === "admin" ? "/admin" : "/app";
+  return role === "super" ? "/super" : role === "doctor" ? "/doctor" : role === "staff" ? "/staff" : role === "admin" ? "/admin" : "/app";
 }
 
 export function onUser(cb: (u: AppUser | null) => void) {
@@ -40,10 +40,10 @@ export function onUser(cb: (u: AppUser | null) => void) {
     // Use onSnapshot for instant load + live sync — no extra round-trip delay
     const unsub = onSnapshot(doc(db, "users", fb.uid), (snap) => {
       const data = snap.exists() ? snap.data() : {};
-      cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId });
+      cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId, roomId: data.roomId });
     }, () => {
       // Firestore read failed — still return minimal user so pages don't stall
-      cb({ uid: fb.uid, email: fb.email, role: "customer", name: undefined, businessId: undefined });
+      cb({ uid: fb.uid, email: fb.email, role: "customer", name: undefined, businessId: undefined, roomId: undefined });
     });
     return unsub;
   });

@@ -252,9 +252,9 @@ exports.transferToken = onCall(opts, async (req) => {
   if (!toServiceId && room) {
     await tokRef.update({
       room,
-      status: "served",
-      completedAt: FieldValue.serverTimestamp(),
-      servedBy: req.auth.uid
+      status: "transferred", // Was 'served', but now needs to wait for Doctor
+      transferredAt: FieldValue.serverTimestamp(),
+      transferredBy: req.auth.uid
     });
     const served = (await tokRef.get()).data();
     if (served.fcmToken) {
@@ -520,5 +520,38 @@ exports.whatsappWebhook = onRequest({ region: "asia-south1", maxInstances: 5 }, 
     console.error("whatsappWebhook:", e.message);
     res.sendStatus(200); // always 200 so Meta doesn't retry-storm
   }
+});
+
+// Doctor calls a token that was transferred to their room.
+exports.doctorCallToken = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Doctor sign-in required.");
+  const { tokenId } = req.data || {};
+  if (!tokenId) throw new HttpsError("invalid-argument", "Missing tokenId.");
+  const tokRef = db.doc(`tokens/${tokenId}`);
+  const snap = await tokRef.get();
+  if (!snap.exists) throw new HttpsError("not-found", "Token not found.");
+  
+  await tokRef.update({
+    status: "serving_doctor",
+    doctorCalledAt: FieldValue.serverTimestamp(),
+    servedByDoctor: req.auth.uid
+  });
+  
+  return { ok: true };
+});
+
+// Doctor completes a token.
+exports.doctorCompleteToken = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Doctor sign-in required.");
+  const { tokenId } = req.data || {};
+  if (!tokenId) throw new HttpsError("invalid-argument", "Missing tokenId.");
+  const tokRef = db.doc(`tokens/${tokenId}`);
+  
+  await tokRef.update({
+    status: "completed",
+    completedAt: FieldValue.serverTimestamp(),
+  });
+  
+  return { ok: true };
 });
 

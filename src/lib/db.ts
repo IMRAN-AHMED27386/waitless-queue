@@ -352,3 +352,24 @@ export async function onboardBusiness(data: { businessName: string; category: st
   const res = await fn(data);
   return res.data as { businessId: string };
 }
+
+export function listenDoctorQueue(businessId: string, roomId: string, cb: (t: Tok[]) => void) {
+  const q = query(
+    collection(db, "tokens"),
+    where("businessId", "==", businessId),
+    where("room", "==", roomId),
+    where("status", "in", ["transferred", "serving_doctor"]),
+    orderBy("numericValue")
+  );
+  return onSnapshot(q, (snap) => cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Tok)));
+}
+
+export async function doctorCallToken(tokenId: string) {
+  const fn = httpsCallable(functions, "doctorCallToken");
+  await fn({ tokenId });
+}
+
+export async function doctorCompleteToken(tokenId: string) {
+  const fn = httpsCallable(functions, "doctorCompleteToken");
+  await fn({ tokenId });
+}
