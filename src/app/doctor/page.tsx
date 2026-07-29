@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useAuthGuard } from "@/lib/auth";
+import { useRouter } from "next/navigation";
+import { useAuthGuard, signOutUser } from "@/lib/auth";
 import { Tok, listenDoctorQueue, doctorCallToken, doctorCompleteToken, listenRooms, Room } from "@/lib/db";
 import { updateDoc, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export default function DoctorDashboard() {
   const { user, ready } = useAuthGuard(["doctor"]);
+  const router = useRouter();
   const [tokens, setTokens] = useState<Tok[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   
@@ -34,10 +36,18 @@ export default function DoctorDashboard() {
     await updateDoc(doc(db, "users", user.uid), { roomId });
   };
 
+  const handleSignOut = async () => {
+    await signOutUser();
+    router.replace("/login");
+  };
+
   if (!user?.roomId) {
     return (
       <div className="p-8 max-w-lg mx-auto">
-        <h1 className="text-2xl font-bold mb-4">Doctor Dashboard</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Doctor Dashboard</h1>
+          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
+        </div>
         <p className="mb-4 text-gray-600">You do not have a room assigned. Please select your room for today:</p>
         <div className="flex flex-col gap-2">
           {rooms.map(r => (
@@ -60,7 +70,10 @@ export default function DoctorDashboard() {
           <h1 className="text-2xl font-bold">Hello, Dr. {user.name || "Doctor"}</h1>
           <p className="text-gray-500">{displayRoomName}</p>
         </div>
-        <button onClick={() => handleSelectRoom("")} className="text-sm text-blue-600 underline">Change Room</button>
+        <div className="flex flex-col items-end gap-2">
+          <button onClick={() => handleSelectRoom("")} className="text-sm text-blue-600 hover:underline">Change Room</button>
+          <button onClick={handleSignOut} className="text-sm font-medium text-red-600 hover:underline">Sign Out</button>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
