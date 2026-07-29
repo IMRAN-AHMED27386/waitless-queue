@@ -393,7 +393,7 @@ export default function Staff() {
                 <div className="text-ink font-bold font-display text-[1.1rem] mb-5">Today's Performance</div>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <Stat n={stats.served} l="Served" color="#0e1726" />
-                  <Stat n={stats.skipped} l="Skipped" color="#ef233c" />
+                  <Stat n={stats.skipped} l="No Show" color="#ef233c" />
                   <Stat n={queue.length} l="Waiting" color="#06d6a0" />
                 </div>
               </div>
