@@ -303,13 +303,11 @@ export default function Staff() {
                 <div className="text-[0.9rem] font-medium" style={{ color: "rgba(255,255,255,.7)" }}>{bizName} &middot; {svcName}</div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <ActionBtn label="Call Next" icon="⏭️" primary onClick={() => advance("next")} />
                 <ActionBtn label="Recall" icon="🔁" onClick={() => flash(`Recalling ${serving} — please proceed`)} />
                 <ActionBtn label="No Show" icon="❌" danger onClick={() => advance("noshow")} />
-                <ActionBtn label="Skip" icon="⏩" onClick={() => advance("skip")} />
                 <ActionBtn label="Transfer" icon="↗️" onClick={openTransfer} />
-                <ActionBtn label="Complete" icon="✅" success onClick={() => advance("complete")} />
               </div>
 
               <button onClick={doPark} disabled={busy || !svc?.currentServing}
