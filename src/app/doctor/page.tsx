@@ -104,7 +104,11 @@ export default function DoctorDashboard() {
                   <div className="grid grid-cols-2 gap-3 my-5">
                     <div className="bg-slate-50 border border-gray-200 rounded-[14px] p-3.5">
                       <label className="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Arrival</label>
-                      <b className="text-lg font-bold text-gray-800">--</b>
+                      <b className="text-lg font-bold text-gray-800">
+                        {currentServing.createdAt && typeof currentServing.createdAt.toDate === "function"
+                          ? currentServing.createdAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                          : "--"}
+                      </b>
                     </div>
                     <div className="bg-slate-50 border border-gray-200 rounded-[14px] p-3.5">
                       <label className="block text-[11px] text-slate-400 uppercase font-semibold mb-1">Status</label>
@@ -160,7 +164,7 @@ export default function DoctorDashboard() {
               >
                 Call Next Patient
               </button>
-              {currentServing && waitingTokens.length > 0 && (
+              {currentServing && (
                 <p className="text-xs text-center text-gray-400 mt-2 font-medium">Complete current patient to call the next.</p>
               )}
             </div>

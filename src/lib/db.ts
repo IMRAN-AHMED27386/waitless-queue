@@ -104,7 +104,7 @@ export type Tok = {
   numericValue: number; number: string; customerName: string; phone: string;
   priority: string; status: string; servedBy?: string | null;
   journey?: JourneyStage[]; parkedAt?: { toDate: () => Date } | null;
-  waCode?: string; waTo?: string; room?: string;
+  waCode?: string; waTo?: string; room?: string; createdAt?: { toDate: () => Date } | null;
 };
 
 export const waitingOf = (s: Svc) => Math.max(0, s.lastIssued - s.currentServing);
