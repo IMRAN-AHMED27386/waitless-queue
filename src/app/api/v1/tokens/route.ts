@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     let out = null;
 
-    await adminDb.runTransaction(async (tx) => {
+    await adminDb.runTransaction(async (tx: any) => {
       const [bizSnap, snap] = await Promise.all([tx.get(bizRef), tx.get(serviceRef)]);
       if (!snap.exists) throw new Error("Service not found.");
       
