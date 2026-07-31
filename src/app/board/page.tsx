@@ -9,6 +9,7 @@ import AdminSidebar from "@/components/AdminSidebar";
 
 export default function Board() {
   const { ready, user } = useAuthGuard(["admin", "super"]);
+  const isSuper = user?.role === "super";
   const router = useRouter();
   const [clock, setClock] = useState("--:--:--");
   const [voice, setVoice] = useState(true);

@@ -108,7 +108,7 @@ export default function BillingPage() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <AdminSidebar active="billing" bizId={bizId} />
+      <AdminSidebar active="billing" bizId={bizId || ""} />
 
       {/* ════════ MAIN DASHBOARD ════════ */}
       <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10 text-gray-800">
