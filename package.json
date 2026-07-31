@@ -29,7 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
-    "firebase-admin": "^14.0.0",
+    "firebase-admin": "^11.11.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

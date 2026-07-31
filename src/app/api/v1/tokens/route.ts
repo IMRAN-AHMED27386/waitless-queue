@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
+import * as admin from 'firebase-admin';
 
 function monthKey() {
   const d = new Date();
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         phone: phone || "",
         priority: priority || "regular",
         status: "waiting",
-        createdAt: FieldValue.serverTimestamp(),
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
         waCode: Math.random().toString(36).slice(2, 8).toUpperCase(),
         source: "api"
       });
