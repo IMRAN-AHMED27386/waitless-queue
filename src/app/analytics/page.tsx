@@ -123,6 +123,7 @@ export default function Analytics() {
     </div>
   );
 
+  return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
       <AdminSidebar active="analytics" bizId={bizId} isSuper={isSuper} />

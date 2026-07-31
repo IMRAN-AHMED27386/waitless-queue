@@ -50,9 +50,6 @@ export default function Board() {
     if (document.fullscreenElement) document.exitFullscreen();
     else el.requestFullscreen?.();
   }
-  
-    else el.requestFullscreen?.();
-  }
 
   if (!ready) return (
     <div className="flex-1 h-screen grid place-items-center bg-[#f5f8fd]">
