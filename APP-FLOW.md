@@ -6,7 +6,7 @@ customers join a queue from their phone, watch their position live, and get call
 while staff manage the line, owners see analytics, and you (the platform) manage all businesses.
 
 ## Live URL
-https://waitless-online.vercel.app  ·  all demo passwords: **waitless123**
+https://waitlessqueue.com  ·  all demo passwords: **waitless123**
 
 ---
 

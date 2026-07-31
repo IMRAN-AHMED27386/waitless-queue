@@ -63,6 +63,11 @@ service cloud.firestore {
       allow update: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
     }
 
+    // API Keys: only admins can manage their business's API keys
+    match /api_keys/{keyId} {
+      allow read, write: if signedIn() && role() in ['admin', 'super'];
+    }
+
     // Feedback: anyone can submit, only staff/admin can read.
     match /feedback/{id} {
       allow create: if true;

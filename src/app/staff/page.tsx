@@ -15,7 +15,7 @@ const inputStyle = "w-full px-3.5 py-2.5 rounded-[12px] border border-border bg-
 const listCardStyle = "bg-white border border-border rounded-2xl p-3.5 flex items-center gap-3 transition-all hover:-translate-y-px shadow-[0_2px_8px_rgba(16,24,40,0.02)] hover:shadow-[0_8px_20px_rgba(16,24,40,0.06)]";
 
 export default function Staff() {
-  const { ready, user } = useAuthGuard(["staff"]);
+  const { ready, user } = useAuthGuard(["staff", "admin"]);
   const router = useRouter();
   const bizId = user?.businessId ?? "";
   const [bizName, setBizName] = useState("—");

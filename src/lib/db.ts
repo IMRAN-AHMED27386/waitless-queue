@@ -10,6 +10,7 @@ export type Biz = {
   logo: string; location: string; country?: string; distanceKm: number; likes: number;
   alertHeadsUp?: number; alertComeNow?: number;
   plan?: string; status?: string; billingCycle?: string; paidUntil?: string;
+  customLogoUrl?: string; brandColor?: string;
   trialEndsAt?: { toDate: () => Date } | null;
   monthlyTokens?: number; tokensMonthKey?: string;
   waEnabled?: boolean; waPaidCount?: number; waPaidMonthKey?: string;
@@ -95,6 +96,7 @@ export type Svc = {
   paceMins?: number;
   order?: number;
 };
+export type ApiKey = { id: string; businessId: string; key: string; name: string; createdAt: any };
 export type JourneyStage = {
   serviceId: string; serviceName: string; number: string;
   servedBy?: string | null; at?: number;
@@ -157,6 +159,23 @@ export function listenBranches(businessId: string, cb: (b: Branch[]) => void) {
   return onSnapshot(collection(db, `businesses/${businessId}/branches`), (snap) =>
     cb(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Branch))
   );
+}
+
+export function listenServices(bizId: string, cb: (s: Svc[]) => void) {
+  if (!bizId) return () => {};
+  return onSnapshot(collection(db, `businesses/${bizId}/services`), (s) =>
+    cb(s.docs.map((d) => ({ id: d.id, ...d.data() } as Svc)))
+  );
+}
+
+export function listenApiKeys(bizId: string, cb: (keys: ApiKey[]) => void) {
+  if (!bizId) return () => {};
+  const q = query(collection(db, "api_keys"), where("businessId", "==", bizId));
+  return onSnapshot(q, (s) => {
+    const keys = s.docs.map((d) => ({ id: d.id, ...d.data() } as ApiKey));
+    keys.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+    cb(keys);
+  });
 }
 
 export function addBranch(businessId: string, data: Omit<Branch, "id">) {

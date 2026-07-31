@@ -85,8 +85,14 @@ export default function Board() {
       <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: sidebarBg, boxShadow: sidebarShadow }}>
         <div className="p-7">
           <div className="flex items-center gap-3.5 mb-12">
-            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
-            <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
+            {biz?.customLogoUrl ? (
+              <img src={biz.customLogoUrl} alt={biz.name} className="h-11 max-w-[200px] object-contain" />
+            ) : (
+              <>
+                <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
+                <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
+              </>
+            )}
           </div>
           
           <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>

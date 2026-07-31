@@ -293,7 +293,10 @@ export default function Admin() {
           <nav className="flex flex-col gap-2">
             <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">🏢 Dashboard</Link>
             <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
+            <Link href="/admin/billing" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">💳 Billing</Link>
             <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
+            <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">⚙️ Settings</Link>
+            <Link href="/admin/developers" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">👨‍💻 Developers</Link>
           </nav>
         </div>
         
@@ -301,10 +304,23 @@ export default function Admin() {
           <div className="px-5 py-4 rounded-[16px] bg-white/5 border border-white/10 mb-5 shadow-sm relative overflow-hidden">
              <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2" />
              <div className="text-[0.75rem] uppercase tracking-wider text-white/60 font-bold mb-1.5">Plan</div>
-             <div className="text-[1.1rem] font-bold flex items-center justify-between">
-               {cap(planNow)}
+             <div className="text-[1.1rem] font-bold flex items-center justify-between mb-3">
+               <div className="flex items-center gap-2">
+                 {cap(planNow)}
+                 {!isTrial && planNow !== "free" && (
+                   <span className="text-[0.65rem] text-[#06d6a0] bg-[#06d6a0]/20 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider flex items-center gap-1">
+                     <div className="w-1.5 h-1.5 rounded-full bg-[#06d6a0]"></div>
+                     Active
+                   </span>
+                 )}
+               </div>
                {isTrial && <span className="text-[0.7rem] text-[#06d6a0] bg-[#06d6a0]/20 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider">{daysLeft}d left</span>}
              </div>
+             {planNow !== "enterprise" && (
+               <Link href="/admin/billing" className="block text-center w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-[0.8rem] font-bold rounded-xl transition">
+                 {planNow === "pro" ? "Upgrade to Enterprise" : "Upgrade Plan"}
+               </Link>
+             )}
           </div>
           <button onClick={doSignOut} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white transition">
             Sign out
@@ -432,6 +448,7 @@ export default function Admin() {
                         <div className="text-[0.85rem] text-ink-3 font-medium">Prefix <span className="font-bold text-ink-2 px-1.5 py-0.5 rounded bg-surface border border-border/50">{s.prefix}</span> &middot; ~{s.avgMins} min</div>
                       </div>
                       <div className="flex items-center gap-3">
+                        <Link href={`/staff?svc=${s.id}`} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] bg-blue-50 text-blue-600 hover:bg-blue-100 transition shadow-sm">View Queue &rsaquo;</Link>
                         <button onClick={() => openEditSvc(s)} className="text-[0.8rem] font-bold px-4 py-2.5 rounded-[10px] border border-border bg-white text-ink-2 hover:bg-surface-2 transition shadow-sm">Edit</button>
                         <button onClick={async () => {
                           if (confirm(`Remove ${s.name}?`)) {

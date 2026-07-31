@@ -154,10 +154,16 @@ export default function CustomerApp() {
             <button onClick={() => setStep(STEP_ORDER[Math.max(0, stepIndex - 1)])} className="grid place-items-center w-10 h-10 rounded-[12px] border border-border bg-white text-ink-2 shadow-sm hover:border-acc transition" aria-label="Back">←</button>
           )}
           <div className="flex items-center gap-[10px]">
-            <span className="grid place-items-center w-8 h-8 rounded-[8px]" style={brandIconBox}>
-              <span style={{ ...boltIconSm, transform: "scale(0.8) rotate(8deg)" }} />
-            </span>
-            <span className="font-display text-[1.2rem] font-black text-ink tracking-tight">Wait<span className="text-acc">less</span></span>
+            {biz?.customLogoUrl ? (
+              <img src={biz.customLogoUrl} alt={biz.name} className="h-8 max-w-[150px] object-contain" />
+            ) : (
+              <>
+                <span className="grid place-items-center w-8 h-8 rounded-[8px]" style={brandIconBox}>
+                  <span style={{ ...boltIconSm, transform: "scale(0.8) rotate(8deg)" }} />
+                </span>
+                <span className="font-display text-[1.2rem] font-black text-ink tracking-tight">Wait<span className="text-acc">less</span></span>
+              </>
+            )}
           </div>
         </header>
 

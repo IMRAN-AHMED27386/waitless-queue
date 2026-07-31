@@ -22,8 +22,8 @@ const opts = { region: "asia-south1", maxInstances: 10 };
 
 // Brand every push so it looks legitimate (and less like "possible spam") on the
 // lock screen. Icons must be absolute URLs; they live in the web app's /public.
-const ICON = "https://waitless-io.vercel.app/icon-192.png";
-const BADGE = "https://waitless-io.vercel.app/badge-96.png";
+const ICON = "https://waitlessqueue.com/icon-192.png";
+const BADGE = "https://waitlessqueue.com/badge-96.png";
 const webpush = { notification: { icon: ICON, badge: BADGE } };
 
 const monthKey = () => {
