@@ -60,6 +60,10 @@ export default function BillingPage() {
         throw new Error(data.error || "Failed to create subscription");
       }
 
+      if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
+        throw new Error("Razorpay Key ID is missing. Please configure NEXT_PUBLIC_RAZORPAY_KEY_ID in Vercel.");
+      }
+
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         subscription_id: data.subscriptionId,
