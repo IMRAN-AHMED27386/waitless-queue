@@ -7,6 +7,7 @@ import { useAuthGuard } from "@/lib/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { listenBusiness, effectivePlan } from "@/lib/db";
+import AdminSidebar from "@/components/AdminSidebar";
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ export default function BillingPage() {
 
   const planNow = effectivePlan(bizDoc);
   const isActive = bizDoc?.status === "active";
+  const bizId = user?.businessId;
 
   useEffect(() => {
     const script = document.createElement("script");
@@ -104,20 +106,20 @@ export default function BillingPage() {
   if (!ready) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="bg-[#edf3fa] min-h-screen p-4 md:p-5 font-sans text-gray-800">
-      <div className="max-w-[1180px] mx-auto">
-        <div className="bg-white rounded-[22px] shadow-sm p-6 mb-5 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Billing & Subscription</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage your plan and payments</p>
-          </div>
-          <Link href="/admin" className="px-4 py-2 bg-gray-100 rounded-xl font-semibold hover:bg-gray-200 transition text-sm">
-            ← Back to Dashboard
-          </Link>
-        </div>
+    <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
+      {/* ════════ SIDEBAR ════════ */}
+      <AdminSidebar active="billing" bizId={bizId} />
 
-        <div className="grid md:grid-cols-2 gap-[22px]">
-          {/* Pro Plan */}
+      {/* ════════ MAIN DASHBOARD ════════ */}
+      <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10 text-gray-800">
+        <div className="max-w-[1000px] mx-auto">
+          <div className="mb-8">
+            <h1 className="font-display text-[2.2rem] font-extrabold text-ink tracking-tight leading-none mb-2">Billing & Subscription</h1>
+            <p className="text-[0.95rem] font-medium text-ink-3">Manage your plan and payments</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-[22px]">
+            {/* Pro Plan */}
           <div className="bg-white rounded-[22px] shadow-sm p-8 flex flex-col border-2 border-transparent hover:border-blue-500 transition">
             <h2 className="text-xl font-bold text-gray-900">Pro Monthly</h2>
             <div className="text-4xl font-black text-gray-900 my-4">₹2,500 <span className="text-base text-gray-500 font-medium">/mo</span></div>
@@ -157,8 +159,9 @@ export default function BillingPage() {
               {isActive && planNow === "enterprise" ? "Current Plan" : loading ? "Loading..." : "Subscribe to Enterprise"}
             </button>
           </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

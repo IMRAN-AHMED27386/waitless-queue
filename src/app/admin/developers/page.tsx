@@ -6,6 +6,7 @@ import { useAuthGuard } from "@/lib/auth";
 import { db } from "@/lib/firebase";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
 import { listenBusiness, effectivePlan, listenApiKeys, type ApiKey } from "@/lib/db";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function DevelopersPage() {
   const { user, ready } = useAuthGuard(["admin"]);
@@ -71,20 +72,20 @@ export default function DevelopersPage() {
   if (!ready) return <div className="p-8 text-center">Loading...</div>;
 
   return (
-    <div className="bg-[#edf3fa] min-h-screen p-4 md:p-5 font-sans text-gray-800">
-      <div className="max-w-[1180px] mx-auto">
-        <div className="bg-white rounded-[22px] shadow-sm p-6 mb-5 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Developer API</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage API keys for custom integrations</p>
-          </div>
-          <Link href="/admin" className="px-4 py-2 bg-gray-100 rounded-xl font-semibold hover:bg-gray-200 transition text-sm">
-            ← Back to Dashboard
-          </Link>
-        </div>
+    <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
+      {/* ════════ SIDEBAR ════════ */}
+      <AdminSidebar active="developers" bizId={user?.businessId || ""} />
 
-        <div className="bg-white rounded-[22px] shadow-sm p-8 relative overflow-hidden">
-          {!isEnterprise && (
+      {/* ════════ MAIN DASHBOARD ════════ */}
+      <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10 text-gray-800">
+        <div className="max-w-[1000px] mx-auto">
+          <div className="mb-8">
+            <h1 className="font-display text-[2.2rem] font-extrabold text-ink tracking-tight leading-none mb-2">Developer API</h1>
+            <p className="text-[0.95rem] font-medium text-ink-3">Manage API keys for custom integrations</p>
+          </div>
+
+          <div className="bg-white rounded-[22px] shadow-sm p-8 relative overflow-hidden">
+            {!isEnterprise && (
             <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center">
               <div className="bg-white shadow-xl rounded-2xl p-8 max-w-sm text-center border border-gray-100">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
@@ -168,8 +169,9 @@ export default function DevelopersPage() {
               </pre>
             </div>
           </div>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

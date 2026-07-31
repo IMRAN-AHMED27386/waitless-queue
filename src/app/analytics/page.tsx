@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listenBusinessTokens, listenBusinesses, listenBusiness, listenAllServices, type HistTok, type Biz, type Svc } from "@/lib/db";
-import { useAuthGuard, signOutUser } from "@/lib/auth";
+import { useAuthGuard } from "@/lib/auth";
+import AdminSidebar from "@/components/AdminSidebar";
 
 const SVC_COLORS = ["#0ea5e9", "#06D6A0", "#f43f5e", "#f59e0b", "#8b5cf6", "#94a3b8"];
 const HOURS = Array.from({ length: 12 }, (_, i) => 7 + i); // 7am..6pm
@@ -112,11 +113,6 @@ export default function Analytics() {
     URL.revokeObjectURL(url);
   }
 
-  async function doSignOut() {
-    await signOutUser();
-    router.replace("/login");
-  }
-
   if (!ready) return (
     <div className="flex-1 h-screen grid place-items-center bg-[#f5f8fd]">
       <div className="flex flex-col items-center gap-3 animate-pulse">
@@ -127,47 +123,9 @@ export default function Analytics() {
     </div>
   );
 
-  const sidebarBg = isSuper
-    ? "linear-gradient(180deg,#1c0a30 0%,#2a104a 100%)"
-    : "linear-gradient(180deg,#0a1128 0%,#162550 100%)";
-  const sidebarShadow = isSuper
-    ? "4px 0 24px rgba(28,10,48,0.15)"
-    : "4px 0 24px rgba(10,17,40,0.15)";
-  const logoBg = isSuper
-    ? "linear-gradient(135deg,#7209b7,#b5179e)"
-    : "linear-gradient(135deg,#315cff,#59d4d1)";
-  const logoShadow = isSuper
-    ? "0 8px 24px rgba(114,9,183,.4)"
-    : "0 8px 24px rgba(49,92,255,.4)";
-
-  return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: sidebarBg, boxShadow: sidebarShadow }}>
-        <div className="p-7">
-          <div className="flex items-center gap-3.5 mb-12">
-            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
-            <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
-          </div>
-          
-          <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>
-          <div className="font-display font-bold text-[1.1rem] px-1.5 mb-1 truncate leading-tight">{bizName}</div>
-          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId}</div>
-
-          <nav className="flex flex-col gap-2">
-            {!isSuper && <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Dashboard</Link>}
-            {isSuper && <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 All Businesses</Link>}
-            <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">📊 Analytics</Link>
-            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
-          </nav>
-        </div>
-        
-        <div className="p-7 pt-0">
-          <button onClick={doSignOut} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white transition">
-            Sign out
-          </button>
-        </div>
-      </div>
+      <AdminSidebar active="analytics" bizId={bizId} isSuper={isSuper} />
 
       {/* ════════ MAIN DASHBOARD ════════ */}
       <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10">

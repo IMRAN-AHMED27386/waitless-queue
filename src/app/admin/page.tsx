@@ -21,6 +21,7 @@ import { db } from "@/lib/firebase";
 import Modal, { Field, inputCls } from "@/components/Modal";
 import QRCode from "qrcode";
 import { DEFAULT_COUNTRIES, countryByCode } from "@/lib/countries";
+import AdminSidebar from "@/components/AdminSidebar";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -279,54 +280,7 @@ export default function Admin() {
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: "linear-gradient(180deg,#0a1128 0%,#162550 100%)", boxShadow: "4px 0 24px rgba(10,17,40,0.15)" }}>
-        <div className="p-7">
-          <div className="flex items-center gap-3.5 mb-12">
-            <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: "linear-gradient(135deg,#315cff,#59d4d1)", boxShadow: "0 8px 24px rgba(49,92,255,.4)" }}>⚡</span>
-            <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
-          </div>
-          
-          <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>
-          <div className="font-display font-bold text-[1.1rem] px-1.5 mb-1 truncate leading-tight">{bizName}</div>
-          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId}</div>
-
-          <nav className="flex flex-col gap-2">
-            <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">🏢 Dashboard</Link>
-            <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
-            <Link href="/admin/billing" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">💳 Billing</Link>
-            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📺 TV Board</Link>
-            <Link href="/admin/settings" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">⚙️ Settings</Link>
-            <Link href="/admin/developers" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">👨‍💻 Developers</Link>
-          </nav>
-        </div>
-        
-        <div className="p-7 pt-0">
-          <div className="px-5 py-4 rounded-[16px] bg-white/5 border border-white/10 mb-5 shadow-sm relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full blur-xl -translate-y-1/2 translate-x-1/2" />
-             <div className="text-[0.75rem] uppercase tracking-wider text-white/60 font-bold mb-1.5">Plan</div>
-             <div className="text-[1.1rem] font-bold flex items-center justify-between mb-3">
-               <div className="flex items-center gap-2">
-                 {cap(planNow)}
-                 {!isTrial && planNow !== "free" && (
-                   <span className="text-[0.65rem] text-[#06d6a0] bg-[#06d6a0]/20 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider flex items-center gap-1">
-                     <div className="w-1.5 h-1.5 rounded-full bg-[#06d6a0]"></div>
-                     Active
-                   </span>
-                 )}
-               </div>
-               {isTrial && <span className="text-[0.7rem] text-[#06d6a0] bg-[#06d6a0]/20 px-2 py-0.5 rounded-md uppercase font-bold tracking-wider">{daysLeft}d left</span>}
-             </div>
-             {planNow !== "enterprise" && (
-               <Link href="/admin/billing" className="block text-center w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-[0.8rem] font-bold rounded-xl transition">
-                 {planNow === "pro" ? "Upgrade to Enterprise" : "Upgrade Plan"}
-               </Link>
-             )}
-          </div>
-          <button onClick={doSignOut} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white transition">
-            Sign out
-          </button>
-        </div>
-      </div>
+      <AdminSidebar active="dashboard" bizId={bizId} />
 
       {/* ════════ MAIN DASHBOARD ════════ */}
       <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-12 md:py-12 relative z-10">

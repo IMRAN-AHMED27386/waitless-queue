@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { listenBusinesses, listenAllServices, type Biz, type Svc } from "@/lib/db";
-import { useAuthGuard, signOutUser } from "@/lib/auth";
+import { useAuthGuard } from "@/lib/auth";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function Board() {
   const { ready, user } = useAuthGuard(["admin", "super"]);
@@ -50,9 +51,7 @@ export default function Board() {
     else el.requestFullscreen?.();
   }
   
-  async function doSignOut() {
-    await signOutUser();
-    router.replace("/login");
+    else el.requestFullscreen?.();
   }
 
   if (!ready) return (
@@ -65,63 +64,10 @@ export default function Board() {
     </div>
   );
 
-  const isSuper = user?.role === "super";
-  const sidebarBg = isSuper
-    ? "linear-gradient(180deg,#1c0a30 0%,#2a104a 100%)"
-    : "linear-gradient(180deg,#0a1128 0%,#162550 100%)";
-  const sidebarShadow = isSuper
-    ? "4px 0 24px rgba(28,10,48,0.15)"
-    : "4px 0 24px rgba(10,17,40,0.15)";
-  const logoBg = isSuper
-    ? "linear-gradient(135deg,#7209b7,#b5179e)"
-    : "linear-gradient(135deg,#315cff,#59d4d1)";
-  const logoShadow = isSuper
-    ? "0 8px 24px rgba(114,9,183,.4)"
-    : "0 8px 24px rgba(49,92,255,.4)";
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#f5f8fd]">
       {/* ════════ SIDEBAR ════════ */}
-      <div className="w-[280px] shrink-0 h-full flex flex-col justify-between text-white relative z-20" style={{ background: sidebarBg, boxShadow: sidebarShadow }}>
-        <div className="p-7">
-          <div className="flex items-center gap-3.5 mb-12">
-            {biz?.customLogoUrl ? (
-              <img src={biz.customLogoUrl} alt={biz.name} className="h-11 max-w-[200px] object-contain" />
-            ) : (
-              <>
-                <span className="grid place-items-center w-11 h-11 rounded-[12px] text-white text-xl" style={{ background: logoBg, boxShadow: logoShadow }}>⚡</span>
-                <span className="font-display text-[1.55rem] font-bold tracking-tight">Waitless</span>
-              </>
-            )}
-          </div>
-          
-          <div className="text-[0.7rem] uppercase tracking-widest font-bold text-white/50 mb-3 px-1.5">Business</div>
-          <div className="font-display font-bold text-[1.1rem] px-1.5 mb-1 truncate leading-tight">{biz?.name ?? "—"}</div>
-          <div className="text-[0.75rem] font-medium text-white/60 px-1.5 mb-8 truncate">{bizId || "—"}</div>
-
-          <nav className="flex flex-col gap-2">
-            {user?.role === "admin" && (
-              <>
-                <Link href="/admin" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 Dashboard</Link>
-                <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
-              </>
-            )}
-            {user?.role === "super" && (
-              <>
-                <Link href="/super" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">🏢 All Businesses</Link>
-                <Link href="/analytics" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] hover:bg-white/5 text-white/70 hover:text-white transition font-semibold">📊 Analytics</Link>
-              </>
-            )}
-            <Link href="/board" className="flex items-center gap-3 px-4 py-3.5 rounded-[12px] bg-white/10 text-white font-semibold transition shadow-sm border border-white/5">📺 TV Board</Link>
-          </nav>
-        </div>
-        
-        <div className="p-7 pt-0">
-          <button onClick={doSignOut} className="w-full text-[0.85rem] font-bold px-4 py-3 rounded-[12px] border border-white/20 bg-transparent text-white/80 hover:bg-white/10 hover:text-white transition">
-            Sign out
-          </button>
-        </div>
-      </div>
+      <AdminSidebar active="board" bizId={bizId} isSuper={isSuper} />
 
       {/* ════════ MAIN DASHBOARD ════════ */}
       <main className="flex-1 h-full overflow-y-auto px-6 py-8 md:px-10 md:py-10 relative z-10">
