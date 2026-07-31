@@ -9,6 +9,10 @@ function monthKey() {
 
 export async function POST(req: NextRequest) {
   try {
+    if (!adminDb) {
+      return NextResponse.json({ error: "Server misconfiguration: Developer API requires FIREBASE_SERVICE_ACCOUNT_KEY" }, { status: 500 });
+    }
+
     const authHeader = req.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Missing or invalid Authorization header" }, { status: 401 });
