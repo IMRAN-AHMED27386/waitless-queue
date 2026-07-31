@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   const razorpay = new Razorpay({
@@ -14,8 +13,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const uid = decodedToken.uid;
+    
+    // Verify token using Firebase REST API (no admin credentials needed)
+    const verifyRes = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${process.env.NEXT_PUBLIC_FIREBASE_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: token })
+    });
+    
+    const verifyData = await verifyRes.json();
+    if (!verifyRes.ok || !verifyData.users || verifyData.users.length === 0) {
+      return NextResponse.json({ error: 'Invalid authentication token' }, { status: 401 });
+    }
+    
+    const uid = verifyData.users[0].localId;
 
     // 2. Parse Request
     const body = await req.json();
