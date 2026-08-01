@@ -508,7 +508,7 @@ exports.createAuthAccount = onCall(opts, async (req) => {
     throw new HttpsError("permission-denied", "Only admins can create accounts.");
   }
   
-  const { email, password, displayName } = req.data || {};
+  const { email, password, displayName, role } = req.data || {};
   if (!email || !password) throw new HttpsError("invalid-argument", "Missing email or password.");
   
   try {
@@ -517,6 +517,14 @@ exports.createAuthAccount = onCall(opts, async (req) => {
       password,
       displayName
     });
+
+    await db.doc(`users/${userRecord.uid}`).set({
+      email,
+      name: displayName,
+      role: role || "staff",
+      businessId: callerSnap.data().businessId
+    });
+
     return { uid: userRecord.uid };
   } catch (err) {
     if (err.code === 'auth/email-already-exists') {

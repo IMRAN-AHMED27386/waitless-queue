@@ -398,7 +398,7 @@ export async function updateAuthAccount(data: { uid: string; email?: string; pas
   return res.data;
 }
 
-export async function createAuthAccount(data: { email: string; password?: string; displayName?: string }) {
+export async function createAuthAccount(data: { email: string; password?: string; displayName?: string, role?: string }) {
   const fn = httpsCallable(functions, "createAuthAccount");
   const res = await fn(data);
   return (res.data as any).uid as string;

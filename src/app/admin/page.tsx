@@ -207,8 +207,7 @@ export default function Admin() {
     setToast(staffModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
       if (staffModal?.mode === "new") {
-        const uid = await createAuthAccount({ email: staffForm.email, password: staffForm.pass, displayName: staffForm.name });
-        await addStaffUserRecord(uid, { email: staffForm.email, name: staffForm.name, businessId: bizId });
+        await createAuthAccount({ email: staffForm.email, password: staffForm.pass, displayName: staffForm.name, role: "staff" });
         flash("Staff account created");
       } else if (staffModal?.mode === "edit" && staffModal.id) {
         await updateAuthAccount({ uid: staffModal.id, email: staffForm.email, password: staffForm.pass || undefined, displayName: staffForm.name });
@@ -232,8 +231,7 @@ export default function Admin() {
     setToast(docModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
       if (docModal?.mode === "new") {
-        const uid = await createAuthAccount({ email: docForm.email, password: docForm.pass, displayName: docForm.name });
-        await addDoctorUserRecord(uid, { email: docForm.email, name: docForm.name, businessId: bizId });
+        await createAuthAccount({ email: docForm.email, password: docForm.pass, displayName: docForm.name, role: "doctor" });
         flash("Doctor account created");
       } else if (docModal?.mode === "edit" && docModal.id) {
         await updateAuthAccount({ uid: docModal.id, email: docForm.email, password: docForm.pass || undefined, displayName: docForm.name });
