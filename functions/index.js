@@ -137,9 +137,9 @@ exports.advanceQueue = onCall(opts, async (req) => {
       .limit(1).get();
       
     if (!prevQs.empty) {
-      let finalStatus = "completed";
+      let finalStatus = "served";
       if (action === "noshow") finalStatus = "no-show";
-      // If it's just "next", we assume the previous was "completed".
+      // If it's just "next", we assume the previous was "served".
       
       batch.update(prevQs.docs[0].ref, {
         status: finalStatus,
@@ -606,7 +606,7 @@ exports.doctorCompleteToken = onCall(opts, async (req) => {
   const tokRef = db.doc(`tokens/${tokenId}`);
   
   await tokRef.update({
-    status: "completed",
+    status: "served",
     completedAt: FieldValue.serverTimestamp(),
   });
   

@@ -35,18 +35,23 @@ export function homeFor(role: string) {
 }
 
 export function onUser(cb: (u: AppUser | null) => void) {
-  return onAuthStateChanged(auth, (fb) => {
+  let unsubSnapshot: (() => void) | null = null;
+  const unsubAuth = onAuthStateChanged(auth, (fb) => {
+    if (unsubSnapshot) { unsubSnapshot(); unsubSnapshot = null; }
     if (!fb) { cb(null); return; }
     // Use onSnapshot for instant load + live sync — no extra round-trip delay
-    const unsub = onSnapshot(doc(db, "users", fb.uid), (snap) => {
+    unsubSnapshot = onSnapshot(doc(db, "users", fb.uid), (snap) => {
       const data = snap.exists() ? snap.data() : {};
       cb({ uid: fb.uid, email: fb.email, role: (data.role as string) ?? "customer", name: data.name, businessId: data.businessId, roomId: data.roomId });
     }, () => {
       // Firestore read failed — still return minimal user so pages don't stall
       cb({ uid: fb.uid, email: fb.email, role: "customer", name: undefined, businessId: undefined, roomId: undefined });
     });
-    return unsub;
   });
+  return () => {
+    unsubAuth();
+    if (unsubSnapshot) { unsubSnapshot(); }
+  };
 }
 
 /** Client hook: redirects to /login unless signed in with an allowed role. */

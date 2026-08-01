@@ -17,6 +17,11 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if signedIn() && role() == 'super';
+    }
+
     // Public business + service info powers discovery and the live queue.
     match /businesses/{bizId} {
       allow read: if true;
@@ -24,9 +29,7 @@ service cloud.firestore {
 
       match /services/{svcId} {
         allow read: if true;
-        // Staff/admin manage services; client token issuance also updates
-        // lastIssued here (move to a Cloud Function to fully secure).
-        allow write: if signedIn() || true;
+        allow write: if signedIn();
       }
       match /branches/{branchId} {
         allow read: if true;

@@ -308,7 +308,8 @@ export function saveFeedback(data: { businessId: string; serviceId: string; toke
   return addDoc(collection(db, "feedback"), { ...data, createdAt: serverTimestamp() });
 }
 
-/** Look up active tokens by phone number for customer recovery. Returns waiting/parked tokens. */
+const bizCache: Record<string, string> = {};
+
 export function listenTokensByPhone(phone: string, cb: (tokens: (Tok & { bizName?: string })[]) => void) {
   if (!phone.trim()) { cb([]); return () => {}; }
   return onSnapshot(
@@ -317,10 +318,17 @@ export function listenTokensByPhone(phone: string, cb: (tokens: (Tok & { bizName
       const tokens = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Tok));
       // Enrich with business name
       const enriched = await Promise.all(tokens.map(async (t) => {
+        if (bizCache[t.businessId]) {
+          return { ...t, bizName: bizCache[t.businessId] };
+        }
         try {
           const bizSnap = await getDoc(doc(db, "businesses", t.businessId));
-          return { ...t, bizName: bizSnap.exists() ? (bizSnap.data().name as string) : undefined };
-        } catch { return t; }
+          if (bizSnap.exists()) {
+            bizCache[t.businessId] = bizSnap.data().name as string;
+            return { ...t, bizName: bizCache[t.businessId] };
+          }
+        } catch { }
+        return t;
       }));
       cb(enriched);
     },
@@ -330,9 +338,13 @@ export function listenTokensByPhone(phone: string, cb: (tokens: (Tok & { bizName
 
 export type HistTok = Tok & { createdAt: Date | null };
 
-export function listenBusinessTokens(businessId: string, cb: (t: HistTok[]) => void) {
+export function listenBusinessTokens(businessId: string, since: Date | null, cb: (t: HistTok[]) => void) {
+  let q = query(collection(db, "tokens"), where("businessId", "==", businessId));
+  if (since) {
+    q = query(q, where("createdAt", ">=", since));
+  }
   return onSnapshot(
-    query(collection(db, "tokens"), where("businessId", "==", businessId)),
+    q,
     (snap) => cb(snap.docs.map((d) => {
       const x = d.data() as Record<string, unknown> & { createdAt?: { toDate?: () => Date } };
       return { id: d.id, ...(x as object), createdAt: x.createdAt?.toDate ? x.createdAt.toDate() : null } as HistTok;
@@ -352,9 +364,11 @@ export function setFeatureToggle(businessId: string, key: string, value: boolean
   });
 }
 
-export function listenStaff(businessId: string, cb: (staff: any[]) => void) {
+export type StaffUser = { id: string; email: string; name: string; role: string; businessId: string; roomId?: string };
+
+export function listenStaff(businessId: string, cb: (staff: StaffUser[]) => void) {
   const q = query(collection(db, "users"), where("businessId", "==", businessId), where("role", "==", "staff"));
-  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() } as StaffUser))));
 }
 
 export function addStaffUserRecord(uid: string, data: { email: string; name: string; businessId: string }) {
@@ -365,9 +379,9 @@ export function removeStaffUserRecord(uid: string) {
   return deleteDoc(doc(db, "users", uid));
 }
 
-export function listenDoctors(businessId: string, cb: (doctors: any[]) => void) {
+export function listenDoctors(businessId: string, cb: (doctors: StaffUser[]) => void) {
   const q = query(collection(db, "users"), where("businessId", "==", businessId), where("role", "==", "doctor"));
-  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() } as StaffUser))));
 }
 
 export function addDoctorUserRecord(uid: string, data: { email: string; name: string; businessId: string }) {

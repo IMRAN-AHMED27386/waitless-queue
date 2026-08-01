@@ -289,7 +289,7 @@ export default function Super() {
                   <span className="text-xl">{c.icon}</span>
                   <span className="text-[0.95rem] font-bold text-ink">{c.name}</span>
                   <button onClick={() => { setCatForm({ name: c.name, icon: c.icon }); setCatModal({ mode: "edit", original: c.name }); }} className="ml-2 text-[0.75rem] font-bold text-ink-3 hover:text-acc transition opacity-0 group-hover:opacity-100">Edit</button>
-                  <button onClick={async () => { await removeCategory(c.name); flash(`"${c.name}" removed`); }} className="text-[0.75rem] font-bold text-ink-3 hover:text-danger transition opacity-0 group-hover:opacity-100">×</button>
+                  <button onClick={async () => { if (!confirm(`Are you sure you want to remove the category "${c.name}"?`)) return; await removeCategory(c.name); flash(`"${c.name}" removed`); }} className="text-[0.75rem] font-bold text-ink-3 hover:text-danger transition opacity-0 group-hover:opacity-100">×</button>
                 </div>
               ))}
               {cats.length === 0 && <div className="text-[0.9rem] text-ink-3 font-medium py-4">No categories yet. Add one to get started.</div>}

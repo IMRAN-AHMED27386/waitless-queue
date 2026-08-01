@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuthGuard } from "@/lib/auth";
 import { auth, db } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
-import { listenBusiness, effectivePlan } from "@/lib/db";
+import { listenBusiness, effectivePlan, type Biz } from "@/lib/db";
 import AdminSidebar from "@/components/AdminSidebar";
 
 declare global {
@@ -19,8 +19,11 @@ export default function BillingPage() {
   const { user, ready } = useAuthGuard(["admin"]);
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function flash(msg: string) { setToast(msg); window.setTimeout(() => setToast(null), 3000); }
   const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [bizDoc, setBizDoc] = useState<any>(null);
+  const [bizDoc, setBizDoc] = useState<Biz | null>(null);
 
   useEffect(() => {
     if (!user?.businessId) return;
@@ -85,7 +88,7 @@ export default function BillingPage() {
             });
           }
 
-          alert("Payment Successful! Your subscription is now active.");
+          flash("Payment Successful! Your subscription is now active.");
           router.push("/admin");
         },
         prefill: {
@@ -101,7 +104,7 @@ export default function BillingPage() {
       rzp.open();
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "An error occurred");
+      flash(err.message || "An error occurred");
     } finally {
       setLoading(false);
     }
@@ -165,6 +168,11 @@ export default function BillingPage() {
           </div>
           </div>
         </div>
+        {toast && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-ink text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm z-50 animate-in fade-in slide-in-from-bottom-4">
+            {toast}
+          </div>
+        )}
       </main>
     </div>
   );

@@ -6,18 +6,21 @@ import { useAuthGuard } from "@/lib/auth";
 import { db, storage } from "@/lib/firebase";
 import { doc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { listenBusiness, effectivePlan } from "@/lib/db";
+import { listenBusiness, effectivePlan, type Biz } from "@/lib/db";
 import AdminSidebar from "@/components/AdminSidebar";
 
 export default function SettingsPage() {
   const { user, ready } = useAuthGuard(["admin"]);
-  const [bizDoc, setBizDoc] = useState<any>(null);
+  const [bizDoc, setBizDoc] = useState<Biz | null>(null);
   
   const [customLogoUrl, setCustomLogoUrl] = useState("");
   const [brandColor, setBrandColor] = useState("#315cff");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  function flash(msg: string) { setToast(msg); window.setTimeout(() => setToast(null), 3000); }
 
   useEffect(() => {
     if (!user?.businessId) return;
@@ -43,8 +46,7 @@ export default function SettingsPage() {
       const url = await getDownloadURL(storageRef);
       setCustomLogoUrl(url);
     } catch (err) {
-      console.error(err);
-      alert("Failed to upload image");
+      flash("Failed to upload image");
     } finally {
       setUploading(false);
       if (e.target) e.target.value = ""; // Reset input
@@ -62,8 +64,7 @@ export default function SettingsPage() {
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
-      console.error(e);
-      alert("Failed to save settings");
+      flash("Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -166,6 +167,11 @@ export default function SettingsPage() {
           </div>
           </div>
         </div>
+        {toast && (
+          <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-ink text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm z-50 animate-in fade-in slide-in-from-bottom-4">
+            {toast}
+          </div>
+        )}
       </main>
     </div>
   );

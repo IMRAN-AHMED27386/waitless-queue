@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenBusinesses, listenAllServices, type Biz, type Svc } from "@/lib/db";
+import { listenBusinesses, listenServices, type Biz, type Svc } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -36,14 +36,18 @@ export default function Board() {
   }, []);
 
   useEffect(() => listenBusinesses(setBusinesses), []);
-  useEffect(() => listenAllServices(setServices), []);
+  useEffect(() => listenServices(bizId, setServices), [bizId]);
 
   const biz = businesses.find((b) => b.id === bizId);
-  const counters = services.filter((s) => s.businessId === bizId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name));
-  const lead = counters[0];
-  const upNext = lead && lead.currentServing > 0
-    ? Array.from({ length: 5 }, (_, i) => `${lead.prefix}-${lead.currentServing + i + 1}`)
-    : [];
+  const counters = [...services].sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name));
+  const upNext: string[] = [];
+  counters.forEach(c => {
+    if (c.currentServing > 0 && c.lastIssued > c.currentServing) {
+      upNext.push(`${c.prefix}-${c.currentServing + 1}`);
+    } else if (c.lastIssued > 0 && c.currentServing === 0) {
+      upNext.push(`${c.prefix}-1`);
+    }
+  });
 
   function goFull() {
     const el = boardRef.current;
@@ -138,7 +142,7 @@ export default function Board() {
             <div className="mt-8 flex items-center justify-between gap-6 relative z-10">
               
               <div className="bg-white/5 border border-white/10 rounded-[24px] px-8 py-8 flex-1 flex items-center gap-6 backdrop-blur-md">
-                <div className="text-[1.4rem] font-bold uppercase tracking-[0.15em] text-white/40 whitespace-nowrap">Up Next <span className="text-white/20">|</span> {lead?.name ?? ""}</div>
+                <div className="text-[1.4rem] font-bold uppercase tracking-[0.15em] text-white/40 whitespace-nowrap">Up Next <span className="text-white/20">|</span> All Counters</div>
                 <div className="flex gap-4 flex-wrap">
                   {upNext.length === 0 && <span className="text-[1.6rem] text-white/30 font-medium">No one waiting in this queue</span>}
                   {upNext.map((t, i) => (

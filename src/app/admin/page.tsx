@@ -4,14 +4,14 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenAllServices,
+  listenBusiness, setFeatureToggle, listenBranches, listenBusinessTokens, listenServices,
   addBranch, updateBranch, removeBranch, addService, updateService, removeService, updateBusiness,
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   listenStaff, addStaffUserRecord, removeStaffUserRecord,
   listenRooms, addRoom, updateRoom, removeRoom,
   listenDoctors, addDoctorUserRecord, removeDoctorUserRecord,
-  type Branch, type HistTok, type Svc, type Biz, type Room,
+  type Branch, type HistTok, type Svc, type Biz, type Room, type StaffUser,
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import { createStaffAuthAccount } from "@/lib/auth-secondary";
@@ -75,10 +75,10 @@ export default function Admin() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [roomModal, setRoomModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [roomForm, setRoomForm] = useState({ name: "" });
-  const [staff, setStaff] = useState<any[]>([]);
+  const [staff, setStaff] = useState<StaffUser[]>([]);
   const [staffModal, setStaffModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [staffForm, setStaffForm] = useState({ name: "", email: "", pass: "" });
-  const [doctors, setDoctors] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<StaffUser[]>([]);
   const [docModal, setDocModal] = useState<null | { mode: "new" } | { mode: "edit"; id: string }>(null);
   const [docForm, setDocForm] = useState({ name: "", email: "", pass: "" });
 
@@ -99,8 +99,8 @@ export default function Admin() {
   useEffect(() => {
     if (!bizId) return;
     const u1 = listenBranches(bizId, setBranches);
-    const u2 = listenBusinessTokens(bizId, setTokens);
-    const u3 = listenAllServices((all) => setServices(all.filter((s) => s.businessId === bizId).sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name))));
+    const u2 = listenBusinessTokens(bizId, null, setTokens);
+    const u3 = listenServices(bizId, (all) => setServices(all.sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || a.name.localeCompare(b.name))));
     const u4 = listenStaff(bizId, setStaff);
     const u5 = listenRooms(bizId, setRooms);
     const u6 = listenDoctors(bizId, setDoctors);
@@ -334,7 +334,15 @@ export default function Admin() {
                   <span className="text-[0.75rem] font-bold uppercase tracking-widest text-ink-3">{s.l}</span>
                   <span className="grid place-items-center w-10 h-10 rounded-[12px] text-[1.1rem] shadow-sm" style={{ background: s.bg }}>{s.icon}</span>
                 </div>
-                <div className="num text-[2.2rem] font-display font-extrabold text-ink leading-none mb-2 relative z-10" dangerouslySetInnerHTML={{ __html: s.v.replace('/', '<span class="text-ink-3/50 text-2xl font-semibold">/</span>') }}></div>
+                <div className="num text-[2.2rem] font-display font-extrabold text-ink leading-none mb-2 relative z-10">
+                  {s.v.includes('/') ? (
+                    <>
+                      {s.v.split('/')[0]}
+                      <span className="text-ink-3/50 text-2xl font-semibold">/</span>
+                      {s.v.split('/')[1]}
+                    </>
+                  ) : s.v}
+                </div>
                 <div className="text-[0.8rem] font-bold text-live relative z-10">{s.c}</div>
               </div>
             ))}

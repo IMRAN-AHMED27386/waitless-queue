@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { listenBusinessTokens, listenBusinesses, listenBusiness, listenAllServices, type HistTok, type Biz, type Svc } from "@/lib/db";
+import { listenBusinessTokens, listenBusinesses, listenBusiness, listenServices, type HistTok, type Biz, type Svc } from "@/lib/db";
 import { useAuthGuard } from "@/lib/auth";
 import AdminSidebar from "@/components/AdminSidebar";
 
@@ -29,12 +29,16 @@ export default function Analytics() {
     return listenBusinesses((b) => { setBusinesses(b); setPickedBizId((cur) => cur || b[0]?.id || ""); });
   }, [isSuper]);
 
-  useEffect(() => listenAllServices(setServices), []);
+  useEffect(() => listenServices(bizId, setServices), [bizId]);
 
   useEffect(() => {
     if (!bizId) return;
-    return listenBusinessTokens(bizId, setTokens);
-  }, [bizId]);
+    const now = new Date();
+    let cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (period === "This Week") cutoff = new Date(now.getTime() - 7 * 86400000);
+    else if (period === "This Month") cutoff = new Date(now.getTime() - 30 * 86400000);
+    return listenBusinessTokens(bizId, cutoff, setTokens);
+  }, [bizId, period]);
 
   useEffect(() => {
     if (!bizId) return;
@@ -43,16 +47,13 @@ export default function Analytics() {
 
   const svcNames = useMemo(() => {
     const m: Record<string, string> = {};
-    services.filter((s) => s.businessId === bizId).forEach((s) => (m[s.id] = s.name));
+    services.forEach((s) => (m[s.id] = s.name));
     return m;
   }, [services, bizId]);
 
   const a = useMemo(() => {
     const now = new Date();
-    let cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    if (period === "This Week") cutoff = new Date(now.getTime() - 7 * 86400000);
-    else if (period === "This Month") cutoff = new Date(now.getTime() - 30 * 86400000);
-    const filtered = tokens.filter((t) => t.createdAt && t.createdAt >= cutoff);
+    const filtered = tokens;
 
     const total = filtered.length;
     const cancelled = filtered.filter((t) => t.status === "cancelled").length;

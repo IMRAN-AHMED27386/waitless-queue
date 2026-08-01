@@ -17,10 +17,15 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
+    match /config/{docId} {
+      allow read: if true;
+      allow write: if signedIn() && role() == 'super';
+    }
+
     // Collection group: services (powers customer discover + staff dropdown)
     match /{path=**}/services/{svcId} {
       allow read: if true;
-      allow write: if signedIn() || true;
+      allow write: if signedIn();
     }
 
     // Public business + service info powers discovery and the live queue.
@@ -30,7 +35,7 @@ service cloud.firestore {
 
       match /services/{svcId} {
         allow read: if true;
-        allow write: if signedIn() || true;
+        allow write: if signedIn();
       }
       match /branches/{branchId} {
         allow read: if true;
