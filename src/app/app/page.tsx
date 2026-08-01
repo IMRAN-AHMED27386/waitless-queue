@@ -52,11 +52,21 @@ export default function CustomerApp() {
   const [rating, setRating] = useState<number | null>(null);
   const [issueError, setIssueError] = useState("");
 
+  // Load businesses and categories first (fast), then defer the heavier
+  // listenAllServices so the business list renders without waiting.
   useEffect(() => {
     const u1 = listenBusinesses((b) => { setBizList(b); setLoaded(true); });
-    const u2 = listenAllServices(setSvcList);
     const u3 = listenCategories(setDbCategories);
-    return () => { u1(); u2(); u3(); };
+    return () => { u1(); u3(); };
+  }, []);
+
+  // Defer loading all services slightly so the discover page paints fast
+  useEffect(() => {
+    let unsub: (() => void) | undefined;
+    const timer = setTimeout(() => {
+      unsub = listenAllServices(setSvcList);
+    }, 100);
+    return () => { clearTimeout(timer); unsub?.(); };
   }, []);
 
   useEffect(() => {
@@ -218,15 +228,22 @@ function Discover({ list, loaded, cat, setCat, query, setQuery, onPick, dbCatego
   const [recoveredTokens, setRecoveredTokens] = useState<(Tok & { bizName?: string })[]>([]);
   const [recovering, setRecovering] = useState(false);
 
+  // Debounce the phone search to avoid hammering Firestore on each keystroke
+  const [debouncedPhone, setDebouncedPhone] = useState("");
   useEffect(() => {
-    if (!recoverPhone.trim() || recoverPhone.trim().length < 5) { setRecoveredTokens([]); return; }
+    const timer = setTimeout(() => setDebouncedPhone(recoverPhone), 400);
+    return () => clearTimeout(timer);
+  }, [recoverPhone]);
+
+  useEffect(() => {
+    if (!debouncedPhone.trim() || debouncedPhone.trim().length < 5) { setRecoveredTokens([]); setRecovering(false); return; }
     setRecovering(true);
-    const unsub = listenTokensByPhone(recoverPhone.trim(), (tokens) => {
+    const unsub = listenTokensByPhone(debouncedPhone.trim(), (tokens) => {
       setRecoveredTokens(tokens);
       setRecovering(false);
     });
     return unsub;
-  }, [recoverPhone]);
+  }, [debouncedPhone]);
 
   return (
     <div>

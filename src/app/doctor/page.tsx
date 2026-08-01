@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
 import { Tok, listenDoctorQueue, doctorCallToken, doctorCompleteToken, listenRooms, Room, listenAllServices, Svc } from "@/lib/db";
@@ -19,13 +19,25 @@ export default function DoctorDashboard() {
     return listenRooms(user.businessId, setRooms);
   }, [ready, user?.businessId]);
 
-  const roomName = rooms.find((r) => r.id === user?.roomId)?.name;
-
+  // Stabilise roomName — only update state when the actual string value changes,
+  // not every time the rooms array gets a new reference from Firestore snapshots.
+  const derivedRoomName = rooms.find((r) => r.id === user?.roomId)?.name;
+  const [stableRoomName, setStableRoomName] = useState<string | undefined>();
   useEffect(() => {
-    if (!ready || !user?.businessId || !roomName) return;
-    setTokens([]); // Clear tokens instantly on room switch to prevent blinking
-    return listenDoctorQueue(user.businessId, roomName, setTokens);
-  }, [ready, user?.businessId, roomName]);
+    setStableRoomName((prev) => (prev === derivedRoomName ? prev : derivedRoomName));
+  }, [derivedRoomName]);
+
+  // Track previous room to only clear tokens on a genuine room switch
+  const prevRoomRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!ready || !user?.businessId || !stableRoomName) return;
+    // Only clear tokens when the doctor actually switches to a different room
+    if (prevRoomRef.current && prevRoomRef.current !== stableRoomName) {
+      setTokens([]);
+    }
+    prevRoomRef.current = stableRoomName;
+    return listenDoctorQueue(user.businessId, stableRoomName, setTokens);
+  }, [ready, user?.businessId, stableRoomName]);
 
   useEffect(() => {
     if (!ready || !user?.businessId) return;
