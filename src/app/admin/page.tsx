@@ -9,6 +9,7 @@ import {
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   listenStaff, addStaffUserRecord, removeStaffUserRecord,
+  listenRooms, addRoom, updateRoom, removeRoom,
   listenDoctors, addDoctorUserRecord, removeDoctorUserRecord,
   type Branch, type HistTok, type Svc, type Biz, type Room, type StaffUser,
   updateAuthAccount, createAuthAccount
