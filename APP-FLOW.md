@@ -97,8 +97,29 @@ Then **show the loop** (token on a phone → call it on staff → watch the TV b
 | 6 | Business admin | `/admin` | login | 4 stat cards, branch cards, feature toggles (persist) |
 | 7 | Analytics | `/analytics` | login | 4 stats, tokens-per-hour chart, by-service, staff table, period + CSV |
 | 8 | Super admin | `/super` | login | 4 platform stats, all-businesses table, search + plan filter |
+| 9 | Developers | `/admin/developers` | login (Enterprise) | API key generation, copy, revoke; service ID lookup; API docs |
 
 ### Live vs placeholder
-- **Live (real Firestore):** customer flow, staff queue/Call Next, TV board, admin feature toggles, admin stat cards, admin branch cards, analytics charts + stats, super-admin table + stats, auth.
+- **Live (real Firestore):** customer flow, staff queue/Call Next, TV board, admin feature toggles, admin stat cards, admin branch cards, analytics charts + stats, super-admin table + stats, auth, **Developer API (POST /api/v1/tokens)**.
 - **Placeholder (static demo values):** landing stats (marketing copy), analytics "Staff Performance" table (needs per-staff serve tracking — future).
+
+---
+
+## Developer API (Enterprise Feature)
+
+Enterprise users can generate API keys from `/admin/developers` and use them to programmatically add tokens to any of their queues.
+
+### API Endpoint
+- **URL:** `POST https://www.waitlessqueue.com/api/v1/tokens`
+- **Auth:** `Authorization: Bearer wk_live_...`
+- **Body (JSON):** `{ "serviceId": "...", "name": "...", "phone": "...", "priority": "regular" }`
+- **Response:** `201 Created` with `{ "id", "number", "numericValue", "status" }`
+
+### Testing with Postman
+1. Create a new `POST` request to `https://www.waitlessqueue.com/api/v1/tokens`
+2. Add headers: `Content-Type: application/json` and `Authorization: Bearer <KEY>`
+3. Set body to raw JSON with serviceId, name, phone, priority
+4. Hit Send — see `201 Created` with the generated token
+
+> **Note:** `firebase-admin` is pinned to v11.11.1 due to a Vercel ESM compatibility issue with v14. No impact on performance or features.
 
