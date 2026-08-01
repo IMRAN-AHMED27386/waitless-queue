@@ -154,9 +154,6 @@ export default function Staff() {
       setShowTransfer(false);
       setTransferRoom("");
       flash(`Sent ${serving} to ${r.toName}`);
-      
-      // Auto-advance without waiting
-      advanceQueue(bizId, svcId, user?.name, "next").catch(console.error);
     } catch (e) {
       flash(e instanceof Error ? e.message : "Transfer failed.");
     }

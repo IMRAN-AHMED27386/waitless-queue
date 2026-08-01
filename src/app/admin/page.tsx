@@ -9,13 +9,11 @@ import {
   ALERT_HEADS_UP_DEFAULT, ALERT_COME_NOW_DEFAULT,
   effectivePlan, tokensUsedThisMonth, trialDaysLeft, FREE_MONTHLY_TOKENS,
   listenStaff, addStaffUserRecord, removeStaffUserRecord,
-  listenRooms, addRoom, updateRoom, removeRoom,
   listenDoctors, addDoctorUserRecord, removeDoctorUserRecord,
   type Branch, type HistTok, type Svc, type Biz, type Room, type StaffUser,
+  updateAuthAccount, createAuthAccount
 } from "@/lib/db";
 import { useAuthGuard, signOutUser } from "@/lib/auth";
-import { createStaffAuthAccount } from "@/lib/auth-secondary";
-import { updateAuthAccount } from "@/lib/db";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Modal, { Field, inputCls } from "@/components/Modal";
@@ -208,7 +206,7 @@ export default function Admin() {
     setToast(staffModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
       if (staffModal?.mode === "new") {
-        const uid = await createStaffAuthAccount(staffForm.email, staffForm.pass);
+        const uid = await createAuthAccount({ email: staffForm.email, password: staffForm.pass, displayName: staffForm.name });
         await addStaffUserRecord(uid, { email: staffForm.email, name: staffForm.name, businessId: bizId });
         flash("Staff account created");
       } else if (staffModal?.mode === "edit" && staffModal.id) {
@@ -233,7 +231,7 @@ export default function Admin() {
     setToast(docModal?.mode === "new" ? "Creating account..." : "Updating account...");
     try {
       if (docModal?.mode === "new") {
-        const uid = await createStaffAuthAccount(docForm.email, docForm.pass);
+        const uid = await createAuthAccount({ email: docForm.email, password: docForm.pass, displayName: docForm.name });
         await addDoctorUserRecord(uid, { email: docForm.email, name: docForm.name, businessId: bizId });
         flash("Doctor account created");
       } else if (docModal?.mode === "edit" && docModal.id) {

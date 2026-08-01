@@ -115,12 +115,7 @@ exports.issueToken = onCall(opts, async (req) => {
   return out;
 });
 
-// Staff advances the queue. Requires auth (staff/admin signed in).
-exports.advanceQueue = onCall(opts, async (req) => {
-  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
-  const { businessId, serviceId, servedBy, action } = req.data || {};
-  if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
-
+async function _advanceQueueLogic(businessId, serviceId, servedBy, action) {
   const svcRef = db.doc(`businesses/${businessId}/services/${serviceId}`);
   const svcSnap = await svcRef.get();
   const s = svcSnap.exists ? svcSnap.data() : {};
@@ -139,12 +134,15 @@ exports.advanceQueue = onCall(opts, async (req) => {
     if (!prevQs.empty) {
       let finalStatus = "served";
       if (action === "noshow") finalStatus = "no-show";
+      else if (action === "transferred") finalStatus = null; // Do not touch!
       // If it's just "next", we assume the previous was "served".
       
-      batch.update(prevQs.docs[0].ref, {
-        status: finalStatus,
-        completedAt: FieldValue.serverTimestamp()
-      });
+      if (finalStatus) {
+        batch.update(prevQs.docs[0].ref, {
+          status: finalStatus,
+          completedAt: FieldValue.serverTimestamp()
+        });
+      }
     }
   }
 
@@ -200,6 +198,15 @@ exports.advanceQueue = onCall(opts, async (req) => {
   await waSend(bizData, served, `🎉 It's your turn! ${served.number} — please proceed to the counter.`);
   await notifyQueue(businessId, serviceId, num, prevServing);
   return { num };
+}
+
+// Staff advances the queue. Requires auth (staff/admin signed in).
+exports.advanceQueue = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Staff sign-in required.");
+  const { businessId, serviceId, servedBy, action } = req.data || {};
+  if (!businessId || !serviceId) throw new HttpsError("invalid-argument", "Missing business/service.");
+  
+  return await _advanceQueueLogic(businessId, serviceId, servedBy, action);
 });
 
 /** The three position-based alert stages a waiting customer passes through. */
@@ -297,6 +304,10 @@ exports.transferToken = onCall(opts, async (req) => {
     }
     const bizData = (await db.doc(`businesses/${businessId}`).get()).data();
     await waSend(bizData, served, `🏥 ${served.number} — please proceed to ${room}.`);
+    
+    // Auto-advance the queue so the client doesn't have to wait or flicker
+    await _advanceQueueLogic(businessId, fromServiceId, req.auth.uid, "transferred");
+    
     return { toName: room, number: served.number };
   }
 
@@ -487,6 +498,32 @@ exports.updateAuthAccount = onCall(opts, async (req) => {
   }
   
   return { ok: true };
+});
+
+exports.createAuthAccount = onCall(opts, async (req) => {
+  if (!req.auth) throw new HttpsError("unauthenticated", "Sign-in required.");
+  
+  const callerSnap = await db.doc(`users/${req.auth.uid}`).get();
+  if (!callerSnap.exists || callerSnap.data().role !== "admin") {
+    throw new HttpsError("permission-denied", "Only admins can create accounts.");
+  }
+  
+  const { email, password, displayName } = req.data || {};
+  if (!email || !password) throw new HttpsError("invalid-argument", "Missing email or password.");
+  
+  try {
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName
+    });
+    return { uid: userRecord.uid };
+  } catch (err) {
+    if (err.code === 'auth/email-already-exists') {
+      throw new HttpsError('already-exists', 'Email already exists.');
+    }
+    throw new HttpsError("internal", err.message);
+  }
 });
 
 const CATEGORY_ICON = { Hospitals: "🏥", Clinics: "💊", Banks: "🏦", Government: "🏛️", Restaurants: "🍽️" };

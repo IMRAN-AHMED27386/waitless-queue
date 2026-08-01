@@ -398,6 +398,12 @@ export async function updateAuthAccount(data: { uid: string; email?: string; pas
   return res.data;
 }
 
+export async function createAuthAccount(data: { email: string; password?: string; displayName?: string }) {
+  const fn = httpsCallable(functions, "createAuthAccount");
+  const res = await fn(data);
+  return (res.data as any).uid as string;
+}
+
 /** Self-signup: creates the caller's business + links their account to it as admin. */
 export async function onboardBusiness(data: { businessName: string; category: string; country?: string; location: string; ownerName: string }) {
   const fn = httpsCallable(functions, "onboardBusiness");
