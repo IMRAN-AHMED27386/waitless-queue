@@ -60,12 +60,18 @@ service cloud.firestore {
       allow update, delete: if signedIn();
     }
 
-    // Role docs: owner can read/write their own; admins can manage their staff
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function isSameBiz() {
+      return userDoc() != null && userDoc().data.businessId == resource.data.businessId;
+    }
+
     match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
-      allow create: if signedIn() && role() in ['admin', 'super'] && request.resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
-      allow delete: if signedIn() && role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId;
-      allow update: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && resource.data.businessId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.businessId));
+      allow read: if signedIn() && (request.auth.uid == uid || isSameBiz() || role() == 'super');
+      allow create: if signedIn() && role() in ['admin', 'super'] && request.resource.data.businessId == userDoc().data.businessId;
+      allow delete: if signedIn() && role() in ['admin', 'super'] && isSameBiz();
+      allow update: if signedIn() && (request.auth.uid == uid || (role() in ['admin', 'super'] && isSameBiz()));
     }
 
     // API Keys: only admins can manage their business's API keys

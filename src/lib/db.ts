@@ -368,7 +368,7 @@ export type StaffUser = { id: string; email: string; name: string; role: string;
 
 export function listenStaff(businessId: string, cb: (staff: StaffUser[]) => void) {
   const q = query(collection(db, "users"), where("businessId", "==", businessId), where("role", "==", "staff"));
-  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() } as StaffUser))));
+  return onSnapshot(q, (snap) => cb(snap.docs.map(d => ({ id: d.id, ...d.data() } as StaffUser))), (err) => console.error("listenStaff error:", err));
 }
 
 export function addStaffUserRecord(uid: string, data: { email: string; name: string; businessId: string }) {
