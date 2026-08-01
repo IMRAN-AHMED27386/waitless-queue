@@ -134,7 +134,7 @@ async function _advanceQueueLogic(businessId, serviceId, servedBy, action) {
     if (!prevQs.empty) {
       let finalStatus = "served";
       if (action === "noshow") finalStatus = "no-show";
-      else if (action === "transferred") finalStatus = null; // Do not touch!
+      else if (action === "transferred" || action === "park") finalStatus = null; // Do not touch!
       // If it's just "next", we assume the previous was "served".
       
       if (finalStatus) {
