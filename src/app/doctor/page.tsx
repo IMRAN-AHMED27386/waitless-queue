@@ -13,6 +13,7 @@ export default function DoctorDashboard() {
   const [tokens, setTokens] = useState<Tok[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [services, setServices] = useState<Svc[]>([]);
+  const [busy, setBusy] = useState(false);
   
   useEffect(() => {
     if (!ready || !user?.businessId) return;
@@ -140,10 +141,20 @@ export default function DoctorDashboard() {
                 </div>
 
                 <button 
-                  onClick={() => doctorCompleteToken(currentServing.id)}
-                  className="w-full py-4 rounded-[14px] bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] transition shadow-sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    try {
+                      await doctorCompleteToken(currentServing.id);
+                    } catch (e) {
+                      console.error("Failed to complete:", e);
+                      alert(e instanceof Error ? e.message : "Could not complete consultation.");
+                    }
+                    setBusy(false);
+                  }}
+                  className="w-full py-4 rounded-[14px] bg-green-600 hover:bg-green-700 text-white font-bold text-[15px] transition shadow-sm disabled:opacity-50"
                 >
-                  ✓ Complete Consultation
+                  {busy ? "Completing..." : "✓ Complete Consultation"}
                 </button>
               </div>
             ) : (
@@ -180,11 +191,20 @@ export default function DoctorDashboard() {
 
             <div className="mt-auto pt-2">
               <button 
-                disabled={waitingTokens.length === 0 || !!currentServing}
-                onClick={() => doctorCallToken(waitingTokens[0].id)}
+                disabled={waitingTokens.length === 0 || !!currentServing || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await doctorCallToken(waitingTokens[0].id);
+                  } catch (e) {
+                    console.error("Failed to call next:", e);
+                    alert(e instanceof Error ? e.message : "Could not call next patient.");
+                  }
+                  setBusy(false);
+                }}
                 className="w-full py-4 rounded-[14px] bg-blue-600 hover:bg-blue-700 text-white font-bold text-[15px] transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Call Next Patient
+                {busy ? "Calling..." : "Call Next Patient"}
               </button>
               {currentServing && (
                 <p className="text-xs text-center text-gray-400 mt-2 font-medium">Complete current patient to call the next.</p>
