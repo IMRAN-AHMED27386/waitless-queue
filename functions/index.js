@@ -422,6 +422,10 @@ exports.parkToken = onCall(opts, async (req) => {
   }
   const parkBiz = (await db.doc(`businesses/${businessId}`).get()).data();
   await waSend(parkBiz, t, `🅿️ We're holding your spot — ${t.number}. You were called; please come to the counter, we've kept your place.`);
+  
+  // After parking the current token, auto-advance the queue to the next person
+  await _advanceQueueLogic(businessId, serviceId, null, "park");
+
   return { ok: true, number: t.number };
 });
 
