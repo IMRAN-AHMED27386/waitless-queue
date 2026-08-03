@@ -69,7 +69,7 @@ export default function Super() {
   const [query, setQuery] = useState("");
   const [plan, setPlan] = useState("All Plans");
   const [modal, setModal] = useState<null | { mode: "new" } | { mode: "manage"; row: Row }>(null);
-  const [form, setForm] = useState({ name: "", category: "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" });
+  const [form, setForm] = useState({ name: "", category: "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly", monthlyTokens: 0 });
   const [toast, setToast] = useState<string | null>(null);
   const [cats, setCats] = useState<Category[]>([]);
   const [catModal, setCatModal] = useState<null | { mode: "new" } | { mode: "edit"; original: string }>(null);
@@ -79,8 +79,8 @@ export default function Super() {
   useEffect(() => listenCategories(setCats), []);
 
   function flash(m: string) { setToast(m); window.setTimeout(() => setToast(null), 2000); }
-  function openNew() { setForm({ name: "", category: cats[0]?.name ?? "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly" }); setModal({ mode: "new" }); }
-  function openManage(r: Row) { setForm({ name: r.name, category: r.category, country: r.country ?? "US", location: r.location, plan: r.plan ?? "free", status: r.status ?? "active", billingCycle: r.billingCycle ?? "monthly" }); setModal({ mode: "manage", row: r }); }
+  function openNew() { setForm({ name: "", category: cats[0]?.name ?? "", country: "US", location: "", plan: "free", status: "active", billingCycle: "monthly", monthlyTokens: 0 }); setModal({ mode: "new" }); }
+  function openManage(r: Row) { setForm({ name: r.name, category: r.category, country: r.country ?? "US", location: r.location, plan: r.plan ?? "free", status: r.status ?? "active", billingCycle: r.billingCycle ?? "monthly", monthlyTokens: r.monthlyTokens ?? 0 }); setModal({ mode: "manage", row: r }); }
   
   async function save() {
     if (modal?.mode === "new") {
@@ -91,7 +91,19 @@ export default function Super() {
       await addBusiness({ name: form.name.trim(), category: form.category, categoryIcon: icon, logo: icon, country: form.country, location: form.location.trim(), plan: form.plan, status: form.status, billingCycle: form.billingCycle, paidUntil, monthlyTokens: 0, likes: 0, distanceKm: 0 });
       flash("Business onboarded");
     } else if (modal?.mode === "manage") {
-      await updateBusiness(modal.row.id, { plan: form.plan, status: form.status, billingCycle: form.billingCycle });
+      const catObj = cats.find((c) => c.name === form.category);
+      const icon = catObj?.icon ?? "🏢";
+      await updateBusiness(modal.row.id, {
+        name: form.name.trim(),
+        category: form.category,
+        categoryIcon: icon,
+        country: form.country,
+        location: form.location.trim(),
+        plan: form.plan,
+        status: form.status,
+        billingCycle: form.billingCycle,
+        monthlyTokens: form.monthlyTokens,
+      });
       flash("Business updated");
     }
     setModal(null);
@@ -302,15 +314,24 @@ export default function Super() {
       {/* MODALS */}
       {modal && (
         <Modal title={modal.mode === "new" ? "Onboard business" : `Manage · ${modal.row.name}`} onClose={() => setModal(null)}>
-          {modal.mode === "new" && (
-            <>
-              <Field label="Business name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Clinic" /></Field>
-              <div className="grid grid-cols-3 gap-4">
-              <Field label="Category"><select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}</select></Field>
+          <Field label="Business name"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Clinic" /></Field>
+          <div className={modal.mode === "new" ? "grid grid-cols-3 gap-4" : "grid grid-cols-2 gap-4"}>
+            <Field label="Category"><select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>{cats.map((c) => <option key={c.name} value={c.name}>{c.icon} {c.name}</option>)}</select></Field>
+            {modal.mode === "new" && (
+              <>
                 <Field label="Country"><select className={inputCls} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{DEFAULT_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}</select></Field>
                 <Field label="Location"><input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City" /></Field>
-              </div>
-            </>
+              </>
+            )}
+            {modal.mode === "manage" && (
+              <Field label="Tokens/mo"><input type="number" min={0} className={inputCls} value={form.monthlyTokens} onChange={(e) => setForm({ ...form, monthlyTokens: parseInt(e.target.value) || 0 })} /></Field>
+            )}
+          </div>
+          {modal.mode === "manage" && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Country"><select className={inputCls} value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>{DEFAULT_COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.flag} {c.name}</option>)}</select></Field>
+              <Field label="Location"><input className={inputCls} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="City" /></Field>
+            </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <Field label="Plan"><select className={inputCls} value={form.plan} onChange={(e) => setForm({ ...form, plan: e.target.value })}><option value="free">Free</option><option value="pro">Pro</option><option value="enterprise">Enterprise</option></select></Field>
@@ -374,7 +395,7 @@ export default function Super() {
             </div>
           )}
 
-          <button onClick={save} disabled={modal.mode === "new" && !form.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white transition shadow-[0_10px_24px_rgba(114,9,183,0.3)] hover:-translate-y-px disabled:opacity-50" style={{ background: "#7209b7" }}>{modal.mode === "new" ? "Onboard Business" : "Save Changes"}</button>
+          <button onClick={save} disabled={!form.name.trim()} className="w-full mt-6 py-3.5 rounded-[14px] font-bold text-white transition shadow-[0_10px_24px_rgba(114,9,183,0.3)] hover:-translate-y-px disabled:opacity-50" style={{ background: "#7209b7" }}>{modal.mode === "new" ? "Onboard Business" : "Save Changes"}</button>
           {modal.mode === "manage" && (
             <button onClick={async () => {
               if (confirm(`Are you sure you want to completely delete ${modal.row.name}? This action cannot be undone.`)) {
