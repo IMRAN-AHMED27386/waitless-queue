@@ -64,7 +64,6 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [fieldErrs, setFieldErrs] = useState<{ email?: string; pw?: string }>({});
   const [busy, setBusy] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const router = useRouter();
