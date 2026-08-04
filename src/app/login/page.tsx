@@ -62,46 +62,77 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
+  const [fieldErrs, setFieldErrs] = useState<{ email?: string; pw?: string }>({});
+  const [busy, setBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const router = useRouter();
 
   async function doLogin(em: string, p: string) {
-    setErr(""); setBusy(true);
+    setErr("");
+    setFieldErrs({});
+    if (!em.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em.trim())) {
+      setFieldErrs({ email: "Please enter a valid email address." });
+      return;
+    }
+    if (!p) {
+      setFieldErrs({ pw: "Please enter your password." });
+      return;
+    }
+
+    setBusy(true);
     try {
-      const cred = await signIn(em, p);
+      const cred = await signIn(em.trim(), p);
       const role = await getRole(cred.user.uid);
       router.replace(homeFor(role));
     } catch (error: any) {
       console.error("Email Auth Error:", error);
-      setErr("Login failed: " + (error?.message || "Check console."));
+      const code = error?.code;
+      if (code === "auth/invalid-credential" || code === "auth/user-not-found" || code === "auth/wrong-password") {
+        setErr("Incorrect email or password.");
+      } else if (code === "auth/too-many-requests") {
+        setErr("Too many failed attempts. Please try again later.");
+      } else {
+        setErr("Login failed. Please try again.");
+      }
       setBusy(false);
     }
   }
 
   async function googleLogin() {
-    setErr(""); setBusy(true);
+    setErr(""); setFieldErrs({}); setBusy(true);
     try {
       const cred = await signInWithGoogle();
       const role = await getRole(cred.user.uid);
       router.replace(homeFor(role));
     } catch (error: any) {
       console.error("Google Auth Error:", error);
-      setErr("Google login failed: " + (error?.message || "Check console."));
+      if (error?.code !== "auth/popup-closed-by-user" && error?.code !== "auth/cancelled-popup-request") {
+        setErr("Google sign-in was canceled or failed.");
+      }
       setBusy(false);
     }
   }
 
   async function handleReset() {
-    if (!email.trim()) { setErr("Enter your email address first."); return; }
-    setErr(""); setBusy(true);
+    setFieldErrs({});
+    setErr("");
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setFieldErrs({ email: "Please enter a valid email address." });
+      return;
+    }
+    setBusy(true);
     try {
       await resetPassword(email.trim());
       setResetSent(true);
     } catch (error: any) {
       console.error("Reset Error:", error);
-      setErr("Could not send reset email. Please check the address.");
+      if (error?.code === "auth/user-not-found") {
+        setErr("No account found with this email.");
+      } else {
+        setErr("Could not send reset email. Please try again.");
+      }
     }
     setBusy(false);
   }
@@ -196,15 +227,20 @@ export default function Login() {
                       <label className="block mb-5">
                         <span className="text-[0.81rem] font-semibold text-ink-2">Email</span>
                         <div className="relative mt-[7px]">
-                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Mail size={18} /></span>
+                          <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${fieldErrs.email ? 'text-red-400' : 'text-ink-3'}`}><Mail size={18} /></span>
                           <input
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => { setEmail(e.target.value); setFieldErrs(prev => ({...prev, email: undefined})); }}
                             placeholder="you@business.com"
                             inputMode="email"
-                            className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                            className={`w-full pl-11 pr-3.5 py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                              fieldErrs.email 
+                                ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                                : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                            }`}
                           />
                         </div>
+                        {fieldErrs.email && <p className="text-[0.78rem] text-red-500 mt-1.5 font-medium">{fieldErrs.email}</p>}
                       </label>
 
                       {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
@@ -245,30 +281,40 @@ export default function Login() {
                   <label className="block mb-4">
                     <span className="text-[0.81rem] font-semibold text-ink-2">Email</span>
                     <div className="relative mt-[7px]">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Mail size={18} /></span>
+                      <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${fieldErrs.email ? 'text-red-400' : 'text-ink-3'}`}><Mail size={18} /></span>
                       <input
                         value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={(e) => { setEmail(e.target.value); setFieldErrs(prev => ({...prev, email: undefined})); setErr(""); }}
                         placeholder="you@business.com"
                         inputMode="email"
-                        className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                        className={`w-full pl-11 pr-3.5 py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                          fieldErrs.email 
+                            ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                            : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                        }`}
                       />
                     </div>
+                    {fieldErrs.email && <p className="text-[0.78rem] text-red-500 mt-1.5 font-medium">{fieldErrs.email}</p>}
                   </label>
 
                   {/* Password */}
                   <label className="block mb-2">
                     <span className="text-[0.81rem] font-semibold text-ink-2">Password</span>
                     <div className="relative mt-[7px]">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Lock size={18} /></span>
+                      <span className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${fieldErrs.pw ? 'text-red-400' : 'text-ink-3'}`}><Lock size={18} /></span>
                       <input
                         value={pw}
-                        onChange={(e) => setPw(e.target.value)}
+                        onChange={(e) => { setPw(e.target.value); setFieldErrs(prev => ({...prev, pw: undefined})); setErr(""); }}
                         type="password"
                         placeholder="••••••••"
-                        className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                        className={`w-full pl-11 pr-3.5 py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                          fieldErrs.pw 
+                            ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                            : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                        }`}
                       />
                     </div>
+                    {fieldErrs.pw && <p className="text-[0.78rem] text-red-500 mt-1.5 font-medium">{fieldErrs.pw}</p>}
                   </label>
 
                   {/* Forgot password link */}
@@ -278,8 +324,13 @@ export default function Login() {
                     </button>
                   </div>
 
-                  {/* Error */}
-                  {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
+                  {/* Summary Error */}
+                  {err && (
+                    <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-red-50/50 border border-red-100 text-red-600 text-[0.82rem] font-medium">
+                      <span className="mt-0.5">⚠️</span>
+                      <p>{err}</p>
+                    </div>
+                  )}
 
                   {/* Sign in button */}
                   <button onClick={() => doLogin(email, pw)} disabled={busy || !email || !pw}

@@ -16,11 +16,11 @@ export default function NavAuth() {
   if (user) {
     const label = user.role === "customer" ? "Open app" : "Dashboard";
     return (
-      <div className="flex items-center gap-2.5">
-        <button onClick={() => signOutUser()} className="text-sm font-semibold text-ink-2 px-3 py-2 rounded-[10px] hover:bg-surface-2 transition">
+      <div className="flex items-center gap-3">
+        <button onClick={() => signOutUser()} className="text-sm font-semibold text-white/70 hover:text-white px-2 py-2 transition cursor-pointer">
           Sign out
         </button>
-        <Link href={homeFor(user.role)} className="text-sm font-semibold text-white px-4 py-2.5 rounded-[10px] bg-acc hover:bg-acc-dark transition">
+        <Link href={homeFor(user.role)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#315cff] text-white font-extrabold text-[0.88rem] no-underline shadow-[0_12px_24px_rgba(49,92,255,.28)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">
           {label}
         </Link>
       </div>
@@ -28,7 +28,7 @@ export default function NavAuth() {
   }
 
   return (
-    <Link href="/login" className="text-sm font-semibold text-white px-4 py-2.5 rounded-[10px] bg-acc hover:bg-acc-dark transition">
+    <Link href="/login" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#315cff] text-white font-extrabold text-[0.88rem] no-underline shadow-[0_12px_24px_rgba(49,92,255,.28)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">
       Sign in
     </Link>
   );

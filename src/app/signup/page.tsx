@@ -57,6 +57,7 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
+  const [fieldErrs, setFieldErrs] = useState<{ businessName?: string; location?: string; ownerName?: string; email?: string; pw?: string }>({});
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
@@ -67,22 +68,36 @@ export default function Signup() {
     });
   }, []);
 
-  const valid = businessName.trim() && ownerName.trim() && email.trim() && pw.length >= 6;
-
   async function submit() {
-    if (!valid || busy) return;
-    setErr(""); setBusy(true);
+    setErr("");
+    setFieldErrs({});
+    
+    // Validate
+    const errs: typeof fieldErrs = {};
+    if (!businessName.trim()) errs.businessName = "Business name is required.";
+    if (!location.trim()) errs.location = "City / Location is required.";
+    if (!ownerName.trim()) errs.ownerName = "Your name is required.";
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errs.email = "Please enter a valid email address.";
+    if (pw.length < 6) errs.pw = "Password must be at least 6 characters.";
+    
+    if (Object.keys(errs).length > 0) {
+      setFieldErrs(errs);
+      return;
+    }
+
+    if (busy) return;
+    setBusy(true);
     try {
       await signUp(email.trim(), pw);
     } catch (e: any) {
       setBusy(false);
       console.error("Signup error:", e);
       if (e instanceof FirebaseError && e.code === "auth/email-already-in-use") {
-        setErr("That email already has an account — sign in instead.");
+        setErr("This email is already registered. Please sign in instead.");
       } else if (e instanceof FirebaseError && e.code === "auth/weak-password") {
-        setErr("Password must be at least 6 characters.");
+        setErr("Password is too weak. Please use at least 6 characters.");
       } else {
-        setErr("Couldn't create your account: " + (e?.message || "Unknown error"));
+        setErr("Could not create your account. Please try again.");
       }
       return;
     }
@@ -181,11 +196,16 @@ export default function Signup() {
                 <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Business Name</span>
                 <input
                   value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
+                  onChange={(e) => { setBusinessName(e.target.value); setFieldErrs(prev => ({...prev, businessName: undefined})); }}
                   placeholder="e.g. Acme Clinic"
-                  className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                  className={`w-full px-[14px] py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                    fieldErrs.businessName 
+                      ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                      : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                  }`}
                 />
               </label>
+              {fieldErrs.businessName && <p className="text-[0.78rem] text-red-500 -mt-2.5 mb-4 font-medium">{fieldErrs.businessName}</p>}
 
               {/* Category & Country Grid */}
               <div className="grid grid-cols-2 gap-4 mb-4">
@@ -218,54 +238,79 @@ export default function Signup() {
                 <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">City / Location</span>
                 <input
                   value={location}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={(e) => { setLocation(e.target.value); setFieldErrs(prev => ({...prev, location: undefined})); }}
                   placeholder="New York"
-                  className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                  className={`w-full px-[14px] py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                    fieldErrs.location 
+                      ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                      : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                  }`}
                 />
               </label>
+              {fieldErrs.location && <p className="text-[0.78rem] text-red-500 -mt-2.5 mb-4 font-medium">{fieldErrs.location}</p>}
 
               {/* Your Name */}
               <label className="block mb-4">
                 <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Your Name</span>
                 <input
                   value={ownerName}
-                  onChange={(e) => setOwnerName(e.target.value)}
+                  onChange={(e) => { setOwnerName(e.target.value); setFieldErrs(prev => ({...prev, ownerName: undefined})); }}
                   placeholder="John Doe"
-                  className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                  className={`w-full px-[14px] py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                    fieldErrs.ownerName 
+                      ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                      : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                  }`}
                 />
               </label>
+              {fieldErrs.ownerName && <p className="text-[0.78rem] text-red-500 -mt-2.5 mb-4 font-medium">{fieldErrs.ownerName}</p>}
 
               {/* Email */}
               <label className="block mb-4">
                 <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Email</span>
                 <input
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setFieldErrs(prev => ({...prev, email: undefined})); setErr(""); }}
                   placeholder="you@business.com"
                   type="email"
-                  className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                  className={`w-full px-[14px] py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                    fieldErrs.email 
+                      ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                      : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                  }`}
                 />
               </label>
+              {fieldErrs.email && <p className="text-[0.78rem] text-red-500 -mt-2.5 mb-4 font-medium">{fieldErrs.email}</p>}
 
               {/* Password */}
               <label className="block mb-6">
                 <span className="block text-[0.81rem] font-semibold text-ink-2 mb-1.5">Password</span>
                 <input
                   value={pw}
-                  onChange={(e) => setPw(e.target.value)}
+                  onChange={(e) => { setPw(e.target.value); setFieldErrs(prev => ({...prev, pw: undefined})); setErr(""); }}
                   type="password"
                   placeholder="At least 6 characters"
-                  className="w-full px-[14px] py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                  className={`w-full px-[14px] py-3 rounded-xl border bg-white text-[0.92rem] text-ink outline-none transition ${
+                    fieldErrs.pw 
+                      ? "border-red-500 bg-red-50/30 focus:border-red-500 focus:shadow-[0_0_0_3px_rgba(239,68,68,.15)]" 
+                      : "border-border focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)]"
+                  }`}
                 />
               </label>
+              {fieldErrs.pw && <p className="text-[0.78rem] text-red-500 -mt-4 mb-4 font-medium">{fieldErrs.pw}</p>}
 
-              {/* Error */}
-              {err && <p className="text-[0.82rem] mb-4" style={{ color: "var(--dng)" }}>{err}</p>}
+              {/* Summary Error */}
+              {err && (
+                <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-red-50/50 border border-red-100 text-red-600 text-[0.82rem] font-medium">
+                  <span className="mt-0.5">⚠️</span>
+                  <p>{err}</p>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button
                 onClick={submit}
-                disabled={!valid || busy}
+                disabled={busy}
                 className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px mb-4"
                 style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}
               >
