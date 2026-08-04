@@ -32,8 +32,6 @@ function KioskContent() {
     if (printData && printerMode === "browser") {
       const timer = setTimeout(() => {
         window.print();
-        // We delay clearing printData slightly so the browser doesn't close the print dialog with an empty page
-        setTimeout(() => setPrintData(null), 500);
       }, 500);
       return () => clearTimeout(timer);
     }
