@@ -28,6 +28,17 @@ function KioskContent() {
     };
   }, [bizId]);
 
+  useEffect(() => {
+    if (printData && printerMode === "browser") {
+      const timer = setTimeout(() => {
+        window.print();
+        // We delay clearing printData slightly so the browser doesn't close the print dialog with an empty page
+        setTimeout(() => setPrintData(null), 500);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [printData, printerMode]);
+
   async function handlePrintReceipt(serviceName: string, tokenNumber: string, waiting: number) {
     if (!biz) return;
     const now = new Date();
@@ -40,10 +51,6 @@ function KioskContent() {
         waiting,
         date: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + now.toLocaleDateString()
       });
-      setTimeout(() => {
-        window.print();
-        setPrintData(null); // Clear after printing
-      }, 100); // Small delay to let React render the printData to the DOM
       return;
     }
 
