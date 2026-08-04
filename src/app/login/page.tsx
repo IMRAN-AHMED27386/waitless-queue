@@ -244,7 +244,7 @@ export default function Login() {
 
                       {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
 
-                      <button onClick={handleReset} disabled={busy || !email.trim()}
+                      <button onClick={handleReset} disabled={busy}
                         className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
                         style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
                         {busy ? "Sending…" : "Send reset link"}
@@ -332,8 +332,8 @@ export default function Login() {
                   )}
 
                   {/* Sign in button */}
-                  <button onClick={() => doLogin(email, pw)} disabled={busy || !email || !pw}
-                    className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
+                  <button onClick={() => doLogin(email, pw)} disabled={busy}
+                    className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px mb-4"
                     style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
                     {busy ? "Signing in…" : "Sign in"}
                   </button>
