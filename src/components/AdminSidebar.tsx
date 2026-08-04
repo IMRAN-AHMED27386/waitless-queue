@@ -13,7 +13,7 @@ export default function AdminSidebar({
   bizId,
   isSuper = false,
 }: {
-  active: "dashboard" | "analytics" | "billing" | "board" | "settings" | "developers" | "super";
+  active: "dashboard" | "analytics" | "billing" | "board" | "settings" | "developers" | "super" | "kiosk";
   bizId: string;
   isSuper?: boolean;
 }) {
@@ -78,6 +78,7 @@ export default function AdminSidebar({
           <Link href="/analytics" className={getCls("analytics")}>📊 Analytics</Link>
           {!isSuper && <Link href="/admin/billing" className={getCls("billing")}>💳 Billing</Link>}
           <Link href="/board" className={getCls("board")}>📺 TV Board</Link>
+          <a href={`/kiosk?biz=${bizId}`} target="_blank" rel="noreferrer" className={getCls("kiosk")}>🖨️ Launch Kiosk</a>
           {!isSuper && <Link href="/admin/settings" className={getCls("settings")}>⚙️ Settings</Link>}
           {!isSuper && <Link href="/admin/developers" className={getCls("developers")}>👨‍💻 Developers</Link>}
         </nav>
