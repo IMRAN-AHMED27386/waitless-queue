@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { listenBusiness, listenAllServices, issueToken, type Biz, type Svc } from "@/lib/db";
 import { EscPosPrinter, printViaUSB, printViaBluetooth } from "@/lib/printer";
 
-export default function KioskPage() {
+function KioskContent() {
   const searchParams = useSearchParams();
   const bizId = searchParams?.get("biz") || "";
 
@@ -199,5 +199,13 @@ export default function KioskPage() {
         ⚙️
       </button>
     </div>
+  );
+}
+
+export default function KioskPage() {
+  return (
+    <Suspense fallback={<div className="h-screen bg-gray-100 flex items-center justify-center">Loading Kiosk...</div>}>
+      <KioskContent />
+    </Suspense>
   );
 }
