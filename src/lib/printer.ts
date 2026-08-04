@@ -64,14 +64,15 @@ export class EscPosPrinter {
  * Connect to a WebUSB Printer and print the receipt
  */
 export async function printViaUSB(bytes: Uint8Array): Promise<boolean> {
-  if (!navigator.usb) {
+  const nav = navigator as any;
+  if (!nav.usb) {
     throw new Error("WebUSB is not supported in this browser. Please use Chrome or Edge on Android/PC.");
   }
   
   try {
     // Request permission to connect to a USB device
     // We leave filters empty so the user can select their specific printer model
-    const device = await navigator.usb.requestDevice({ filters: [] });
+    const device = await nav.usb.requestDevice({ filters: [] });
     await device.open();
     
     // Select the first configuration and interface
@@ -107,12 +108,13 @@ export async function printViaUSB(bytes: Uint8Array): Promise<boolean> {
  * Connect to a Web Bluetooth Printer and print the receipt
  */
 export async function printViaBluetooth(bytes: Uint8Array): Promise<boolean> {
-  if (!navigator.bluetooth) {
+  const nav = navigator as any;
+  if (!nav.bluetooth) {
     throw new Error("Web Bluetooth is not supported in this browser. Please use Chrome or Edge on Android/PC.");
   }
   
   try {
-    const device = await navigator.bluetooth.requestDevice({
+    const device = await nav.bluetooth.requestDevice({
       acceptAllDevices: true,
       optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Generic BLE printer service UUID
     });
