@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import QRCode from "qrcode";
 import { listenBusiness, listenAllServices, issueToken, type Biz, type Svc } from "@/lib/db";
 import { EscPosPrinter, printViaUSB, printViaBluetooth } from "@/lib/printer";
 
@@ -14,7 +15,7 @@ function KioskContent() {
   const [printerMode, setPrinterMode] = useState<"usb" | "bluetooth" | "browser" | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
-  const [printData, setPrintData] = useState<{serviceName: string; tokenNumber: string; waiting: number; date: string} | null>(null);
+  const [printData, setPrintData] = useState<{serviceName: string; tokenNumber: string; waiting: number; date: string; qrCodeDataUrl?: string} | null>(null);
 
   useEffect(() => {
     if (!bizId) return;
@@ -37,16 +38,24 @@ function KioskContent() {
     }
   }, [printData, printerMode]);
 
-  async function handlePrintReceipt(serviceName: string, tokenNumber: string, waiting: number) {
+  async function handlePrintReceipt(serviceName: string, tokenNumber: string, waiting: number, tokenId: string) {
     if (!biz) return;
     const now = new Date();
     
     // If fallback browser mode is selected, use standard printing
     if (printerMode === "browser") {
+      let qrCodeDataUrl = "";
+      try {
+        qrCodeDataUrl = await QRCode.toDataURL(`https://www.waitlessqueue.com/app?token=${tokenId}`, { margin: 1, width: 120 });
+      } catch (e) {
+        console.error("QR Code Error:", e);
+      }
+
       setPrintData({
         serviceName,
         tokenNumber,
         waiting,
+        qrCodeDataUrl,
         date: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + now.toLocaleDateString()
       });
       return;
@@ -109,7 +118,7 @@ function KioskContent() {
     setPrintError(null);
     try {
       const token = await issueToken(bizId, svc.id, { name: "Kiosk User", phone: "", priority: "Regular" });
-      await handlePrintReceipt(svc.name, token.number, svc.currentServing > 0 ? Math.max(0, token.numericValue - svc.currentServing - 1) : 0);
+      await handlePrintReceipt(svc.name, token.number, svc.currentServing > 0 ? Math.max(0, token.numericValue - svc.currentServing - 1) : 0, token.id);
     } catch (err: any) {
       setPrintError(err.message || "Failed to generate token");
     } finally {
@@ -173,10 +182,17 @@ function KioskContent() {
           <div className="text-5xl font-bold mb-2">{printData?.tokenNumber}</div>
         </div>
         
-        <div className="text-sm mb-6 text-center">
+        <div className="text-sm mb-4 text-center">
           <div>People ahead: {printData?.waiting}</div>
           <div>{printData?.date}</div>
         </div>
+        
+        {printData?.qrCodeDataUrl && (
+          <div className="flex flex-col items-center justify-center mb-6">
+            <img src={printData.qrCodeDataUrl} alt="Track Token" className="w-32 h-32" />
+            <div className="text-xs text-center mt-1">Scan to track your<br/>place in line</div>
+          </div>
+        )}
         
         <div className="text-center text-sm">
           Please wait for your number<br/>to be called.
