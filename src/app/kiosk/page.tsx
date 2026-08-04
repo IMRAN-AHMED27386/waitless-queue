@@ -147,10 +147,10 @@ function KioskContent() {
   }
 
   return (
-    <div className="h-screen bg-surface flex flex-col relative overflow-hidden text-ink">
+    <div className="h-screen bg-surface flex flex-col relative overflow-hidden text-ink print:bg-white print:h-auto print:overflow-visible">
       {/* Background Decor */}
-      <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: "radial-gradient(circle at top left, #315cff, transparent 50%)" }} />
-      <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: "radial-gradient(circle at bottom right, #59d4d1, transparent 50%)" }} />
+      <div className="absolute inset-0 pointer-events-none opacity-20 print:hidden" style={{ background: "radial-gradient(circle at top left, #315cff, transparent 50%)" }} />
+      <div className="absolute inset-0 pointer-events-none opacity-20 print:hidden" style={{ background: "radial-gradient(circle at bottom right, #59d4d1, transparent 50%)" }} />
 
       {/* Print-only Receipt (hidden on screen, visible on printer) */}
       <div className="hidden print:block text-black p-4 bg-white" style={{ width: '80mm', margin: '0 auto', fontFamily: 'monospace' }}>
@@ -219,7 +219,7 @@ function KioskContent() {
 
       {/* Overlay during printing */}
       {isPrinting && !printError && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in">
+        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center animate-in fade-in print:hidden">
           <div className="w-24 h-24 bg-[#315cff] rounded-3xl flex items-center justify-center text-white text-5xl mb-6 shadow-2xl animate-pulse">
             🖨️
           </div>
@@ -231,7 +231,7 @@ function KioskContent() {
       {/* Change Printer Settings (Hidden corner) */}
       <button 
         onClick={() => setPrinterMode(null)}
-        className="absolute bottom-4 right-4 w-12 h-12 rounded-full opacity-10 hover:opacity-100 transition-opacity flex items-center justify-center text-xl bg-black text-white z-50">
+        className="absolute bottom-4 right-4 w-12 h-12 rounded-full opacity-10 hover:opacity-100 transition-opacity flex items-center justify-center text-xl bg-black text-white z-50 print:hidden">
         ⚙️
       </button>
     </div>
