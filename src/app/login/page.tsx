@@ -10,11 +10,8 @@ import {
   Bell,
   Mail,
   Lock,
-  Shield,
-  UserCog,
-  ArrowRightCircle,
 } from "lucide-react";
-import { signIn, signInWithGoogle, getRole, homeFor } from "@/lib/auth";
+import { signIn, signInWithGoogle, getRole, homeFor, resetPassword } from "@/lib/auth";
 
 /* ── Inline styles matching the home-page hero design language ── */
 
@@ -61,21 +58,13 @@ const features = [
   { icon: Bell, color: "text-[#f472b6]", title: "Smart notifications", sub: "Push, SMS, and WhatsApp alerts before turn" },
 ];
 
-const demo = [
-  { role: "Admin", email: "admin@waitless.app", sub: "Business", iconColor: "#4361ee", bgColor: "rgba(67,97,238,.1)", Icon: Shield },
-  { role: "Staff", email: "staff@waitless.app", sub: "Counter", iconColor: "#06d6a0", bgColor: "rgba(6,214,160,.1)", Icon: UserCog },
-  { role: "Super", email: "super@waitless.app", sub: "Platform", iconColor: "#7209b7", bgColor: "rgba(114,9,183,.08)", Icon: ({ size, style }: { size: number; style: React.CSSProperties }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={style.color as string} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 .682.557l5.857 1.353a.5.5 0 0 1 .27.846l-4.072 4.283a1 1 0 0 0-.255.775l.643 6.006a.5.5 0 0 1-.717.514L12.463 20.6a1 1 0 0 0-.926 0l-5.335 2.604a.5.5 0 0 1-.717-.514l.643-6.006a1 1 0 0 0-.255-.775L1.8 11.626a.5.5 0 0 1 .27-.846l5.857-1.353a1 1 0 0 0 .682-.557z"/>
-    </svg>
-  )},
-];
-
 export default function Login() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const router = useRouter();
 
   async function doLogin(em: string, p: string) {
@@ -102,6 +91,19 @@ export default function Login() {
       setErr("Google login failed: " + (error?.message || "Check console."));
       setBusy(false);
     }
+  }
+
+  async function handleReset() {
+    if (!email.trim()) { setErr("Enter your email address first."); return; }
+    setErr(""); setBusy(true);
+    try {
+      await resetPassword(email.trim());
+      setResetSent(true);
+    } catch (error: any) {
+      console.error("Reset Error:", error);
+      setErr("Could not send reset email. Please check the address.");
+    }
+    setBusy(false);
   }
 
   return (
@@ -172,105 +174,126 @@ export default function Login() {
 
             {/* Form card */}
             <div className="bg-white border border-border rounded-[20px] p-8" style={{ boxShadow: "0 18px 45px rgba(16,24,40,.10)" }}>
-              <h1 className="font-display text-[1.5rem] font-extrabold text-ink mb-1.5">Welcome back</h1>
-              <p className="text-[0.88rem] text-ink-3 mb-6">Sign in to access your Waitless dashboard.</p>
 
-              {/* Google sign-in */}
-              <button onClick={googleLogin} disabled={busy}
-                className="w-full flex items-center justify-center gap-2.5 py-[13px] rounded-xl border border-border bg-white text-ink font-semibold text-[0.88rem] hover:bg-surface-2 hover:shadow-[0_4px_12px_rgba(16,24,40,.06)] transition disabled:opacity-50 mb-5 cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
-                Continue with Google
-              </button>
+              {/* ── FORGOT PASSWORD MODE ── */}
+              {resetMode ? (
+                <>
+                  <h1 className="font-display text-[1.5rem] font-extrabold text-ink mb-1.5">Reset password</h1>
+                  <p className="text-[0.88rem] text-ink-3 mb-6">Enter your email and we&apos;ll send a reset link.</p>
 
-              {/* Divider */}
-              <div className="flex items-center gap-3.5 mb-5">
-                <div className="flex-1 h-px bg-border" />
-                <span className="text-[0.72rem] text-ink-3">or with email</span>
-                <div className="flex-1 h-px bg-border" />
-              </div>
+                  {resetSent ? (
+                    <div className="text-center py-6">
+                      <div className="text-[2.5rem] mb-3">✉️</div>
+                      <p className="text-[1rem] font-bold text-ink mb-2">Check your inbox</p>
+                      <p className="text-[0.85rem] text-ink-3 mb-5 leading-relaxed">We sent a password reset link to <strong className="text-ink-2">{email}</strong>. Follow the link to set a new password.</p>
+                      <button onClick={() => { setResetMode(false); setResetSent(false); setErr(""); }}
+                        className="text-[0.85rem] font-semibold text-acc hover:underline cursor-pointer">
+                        ← Back to sign in
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block mb-5">
+                        <span className="text-[0.81rem] font-semibold text-ink-2">Email</span>
+                        <div className="relative mt-[7px]">
+                          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Mail size={18} /></span>
+                          <input
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="you@business.com"
+                            inputMode="email"
+                            className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                          />
+                        </div>
+                      </label>
 
-              {/* Email */}
-              <label className="block mb-4">
-                <span className="text-[0.81rem] font-semibold text-ink-2">Email</span>
-                <div className="relative mt-[7px]">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Mail size={18} /></span>
-                  <input
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@business.com"
-                    inputMode="email"
-                    className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
-                  />
-                </div>
-              </label>
+                      {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
 
-              {/* Password */}
-              <label className="block mb-5">
-                <span className="text-[0.81rem] font-semibold text-ink-2">Password</span>
-                <div className="relative mt-[7px]">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Lock size={18} /></span>
-                  <input
-                    value={pw}
-                    onChange={(e) => setPw(e.target.value)}
-                    type="password"
-                    placeholder="••••••••"
-                    className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
-                  />
-                </div>
-              </label>
+                      <button onClick={handleReset} disabled={busy || !email.trim()}
+                        className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
+                        style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
+                        {busy ? "Sending…" : "Send reset link"}
+                      </button>
 
-              {/* Error */}
-              {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
+                      <p className="text-center text-[0.8rem] text-ink-3 mt-3.5">
+                        <button onClick={() => { setResetMode(false); setErr(""); }} className="font-semibold text-acc hover:underline cursor-pointer">← Back to sign in</button>
+                      </p>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* ── NORMAL SIGN-IN MODE ── */}
+                  <h1 className="font-display text-[1.5rem] font-extrabold text-ink mb-1.5">Welcome back</h1>
+                  <p className="text-[0.88rem] text-ink-3 mb-6">Sign in to access your Waitless dashboard.</p>
 
-              {/* Sign in button */}
-              <button onClick={() => doLogin(email, pw)} disabled={busy || !email || !pw}
-                className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
-                style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
-                {busy ? "Signing in…" : "Sign in"}
-              </button>
+                  {/* Google sign-in */}
+                  <button onClick={googleLogin} disabled={busy}
+                    className="w-full flex items-center justify-center gap-2.5 py-[13px] rounded-xl border border-border bg-white text-ink font-semibold text-[0.88rem] hover:bg-surface-2 hover:shadow-[0_4px_12px_rgba(16,24,40,.06)] transition disabled:opacity-50 mb-5 cursor-pointer">
+                    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+                    Continue with Google
+                  </button>
 
-              {/* Sign-up link */}
-              <p className="text-center text-[0.8rem] text-ink-3 mt-3.5">
-                New business? <Link href="/signup" className="font-semibold text-acc hover:underline">Create a free account</Link>
-              </p>
-
-              {/* ── Demo Section ── */}
-              <div className="mt-[22px] pt-5 border-t border-border">
-                <p className="text-[0.7rem] font-bold uppercase tracking-wider text-ink-3 mb-3">Try a demo</p>
-
-                {/* Customer experience button */}
-                <button onClick={() => router.push("/app")}
-                  className="w-full flex items-center justify-center gap-[9px] py-3 rounded-[10px] text-[0.86rem] font-bold text-white transition-all cursor-pointer hover:-translate-y-px mb-3.5"
-                  style={{ background: "#315cff", boxShadow: "0 10px 24px rgba(49,92,255,.24)" }}>
-                  <ArrowRightCircle size={18} />
-                  <div className="text-left">
-                    <div>Explore Customer Experience</div>
-                    <small className="text-[0.72rem] font-medium opacity-85">No login required</small>
+                  {/* Divider */}
+                  <div className="flex items-center gap-3.5 mb-5">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-[0.72rem] text-ink-3">or with email</span>
+                    <div className="flex-1 h-px bg-border" />
                   </div>
-                </button>
 
-                <p className="text-[0.72rem] text-ink-3 mb-2.5">Or sign in to a staff / business account:</p>
+                  {/* Email */}
+                  <label className="block mb-4">
+                    <span className="text-[0.81rem] font-semibold text-ink-2">Email</span>
+                    <div className="relative mt-[7px]">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Mail size={18} /></span>
+                      <input
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="you@business.com"
+                        inputMode="email"
+                        className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                      />
+                    </div>
+                  </label>
 
-                {/* Demo role cards */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  {demo.map((d) => (
-                    <button
-                      key={d.role}
-                      onClick={() => doLogin(d.email, "waitless123")}
-                      disabled={busy}
-                      className="flex flex-col items-center gap-1 py-4 px-2.5 rounded-xl border border-border bg-white transition-all cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_10px_22px_rgba(16,24,40,.08)] hover:border-acc/30 disabled:opacity-50"
-                    >
-                      <div className="w-[44px] h-[44px] rounded-xl grid place-items-center mb-1" style={{ background: d.bgColor }}>
-                        <d.Icon size={22} style={{ color: d.iconColor }} />
-                      </div>
-                      <div className="text-[0.86rem] font-bold text-ink">{d.role}</div>
-                      <div className="text-[0.7rem] text-ink-3">{d.sub}</div>
+                  {/* Password */}
+                  <label className="block mb-2">
+                    <span className="text-[0.81rem] font-semibold text-ink-2">Password</span>
+                    <div className="relative mt-[7px]">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"><Lock size={18} /></span>
+                      <input
+                        value={pw}
+                        onChange={(e) => setPw(e.target.value)}
+                        type="password"
+                        placeholder="••••••••"
+                        className="w-full pl-11 pr-3.5 py-3 rounded-xl border border-border bg-white text-[0.92rem] text-ink outline-none focus:border-acc focus:shadow-[0_0_0_3px_rgba(67,97,238,.1)] transition"
+                      />
+                    </div>
+                  </label>
+
+                  {/* Forgot password link */}
+                  <div className="text-right mb-4">
+                    <button onClick={() => { setResetMode(true); setErr(""); }} className="text-[0.78rem] font-semibold text-acc hover:underline cursor-pointer">
+                      Forgot password?
                     </button>
-                  ))}
-                </div>
+                  </div>
 
-                <p className="text-center text-[0.7rem] text-ink-3 mt-2.5">All demo accounts use password: <strong className="font-semibold">waitless123</strong></p>
-              </div>
+                  {/* Error */}
+                  {err && <p className="text-[0.82rem] mb-3" style={{ color: "var(--dng)" }}>{err}</p>}
+
+                  {/* Sign in button */}
+                  <button onClick={() => doLogin(email, pw)} disabled={busy || !email || !pw}
+                    className="w-full py-[14px] rounded-xl text-[0.92rem] font-bold text-white transition-all disabled:opacity-50 cursor-pointer hover:-translate-y-px"
+                    style={{ background: "#315cff", boxShadow: "0 14px 30px rgba(49,92,255,.28)" }}>
+                    {busy ? "Signing in…" : "Sign in"}
+                  </button>
+
+                  {/* Sign-up link */}
+                  <p className="text-center text-[0.8rem] text-ink-3 mt-3.5">
+                    New business? <Link href="/signup" className="font-semibold text-acc hover:underline">Create a free account</Link>
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Back to home */}

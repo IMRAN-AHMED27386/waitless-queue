@@ -6,7 +6,7 @@ customers join a queue from their phone, watch their position live, and get call
 while staff manage the line, owners see analytics, and you (the platform) manage all businesses.
 
 ## Live URL
-https://waitlessqueue.com  ·  all demo passwords: **waitless123**
+https://waitlessqueue.com
 
 ---
 
@@ -16,9 +16,9 @@ https://waitlessqueue.com  ·  all demo passwords: **waitless123**
 |------|-----|-----|-------|
 | **Customer** | Person joining a queue | `/app` | none (or Google) |
 | **TV Board** | Screen in the waiting area | `/board` | none (public) |
-| **Staff** | Counter operator | `/staff` | staff@waitless.app |
-| **Business Admin** | Business owner | `/admin`, `/analytics` | admin@waitless.app |
-| **Super Admin** | Platform owner (you) | `/super` | super@waitless.app |
+| **Staff** | Counter operator | `/staff` | Email/password |
+| **Business Admin** | Business owner | `/admin`, `/analytics` | Email/password or Google |
+| **Super Admin** | Platform owner (you) | `/super` | Google (imran27386@gmail.com) |
 
 ---
 
@@ -34,21 +34,21 @@ https://waitlessqueue.com  ·  all demo passwords: **waitless123**
 - Can **Cancel** the token anytime.
 
 ### 2. Staff  (`/staff`)
-1. `/login` → staff@waitless.app.
+1. `/login` → sign in with staff credentials.
 2. See the **live queue** (waiting tokens) + the big **Now Serving** number.
 3. **Call Next** → advances to the next token (it leaves the queue, serving number climbs).
 4. **Complete / No Show** → also advance (and count). **Recall / Skip / Transfer** → quick actions.
 5. **Today's Progress** — served / skipped / waiting.
 
 ### 3. Business Admin  (`/admin` + `/analytics`)
-1. `/login` → admin@waitless.app.
+1. `/login` → sign in with admin credentials.
 2. **Dashboard** — active tokens, avg wait, branches active, completion rate.
 3. **Branches** — each branch's in-queue / counters / avg-wait; Edit / View Queue.
 4. **Feature Controls** — toggle features (online booking, SMS, WhatsApp, voice, etc.). Toggles **save to the database** (persist on reload).
 5. **Analytics** (`/analytics`) — tokens per hour (real chart), by-service breakdown, staff performance.
 
 ### 4. Super Admin  (`/super`)
-1. `/login` → super@waitless.app.
+1. `/login` → sign in with Google (imran27386@gmail.com).
 2. **Platform stats** — total businesses, monthly tokens, revenue, paid ratio (computed live).
 3. **All businesses table** — search + filter by plan; plan/status/tokens per business; Manage.
 

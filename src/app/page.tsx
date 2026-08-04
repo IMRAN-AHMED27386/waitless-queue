@@ -96,7 +96,7 @@ export default function Home() {
               Waitless gives customers a token from their phone, shows staff what to call next, and gives owners a live view of every branch before queues become a problem.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-[34px]">
-              <Link href="/app" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#315cff] text-white font-extrabold no-underline shadow-[0_14px_30px_rgba(49,92,255,.32)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">Launch Demo →</Link>
+              <Link href="/app" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-[#315cff] text-white font-extrabold no-underline shadow-[0_14px_30px_rgba(49,92,255,.32)] hover:bg-[#1e45d6] hover:-translate-y-px transition-all">Get a Token →</Link>
               <Link href="/login" className="inline-flex items-center gap-2 px-5 py-3 rounded-lg bg-white border border-[#dde3f4] text-[#0d1b3e] font-extrabold no-underline hover:-translate-y-px hover:shadow-[0_10px_22px_rgba(0,0,0,.16)] transition-all">Get Started</Link>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[640px]">

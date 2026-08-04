@@ -1,7 +1,7 @@
 "use client";
 
 import { auth, db } from "./firebase";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, sendPasswordResetEmail } from "firebase/auth";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,11 @@ export function signOutUser() {
 
 export function signInWithGoogle() {
   return signInWithPopup(auth, new GoogleAuthProvider());
+}
+
+/** Sends a password-reset email via Firebase Auth. */
+export function resetPassword(email: string) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 export async function getRole(uid: string): Promise<string> {
