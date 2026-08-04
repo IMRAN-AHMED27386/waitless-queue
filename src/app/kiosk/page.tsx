@@ -14,6 +14,7 @@ function KioskContent() {
   const [printerMode, setPrinterMode] = useState<"usb" | "bluetooth" | "browser" | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [printError, setPrintError] = useState<string | null>(null);
+  const [printData, setPrintData] = useState<{serviceName: string; tokenNumber: string; waiting: number; date: string} | null>(null);
 
   useEffect(() => {
     if (!bizId) return;
@@ -33,7 +34,16 @@ function KioskContent() {
     
     // If fallback browser mode is selected, use standard printing
     if (printerMode === "browser") {
-      window.print();
+      setPrintData({
+        serviceName,
+        tokenNumber,
+        waiting,
+        date: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + " " + now.toLocaleDateString()
+      });
+      setTimeout(() => {
+        window.print();
+        setPrintData(null); // Clear after printing
+      }, 100); // Small delay to let React render the printData to the DOM
       return;
     }
 
@@ -142,8 +152,34 @@ function KioskContent() {
       <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: "radial-gradient(circle at top left, #315cff, transparent 50%)" }} />
       <div className="absolute inset-0 pointer-events-none opacity-20" style={{ background: "radial-gradient(circle at bottom right, #59d4d1, transparent 50%)" }} />
 
+      {/* Print-only Receipt (hidden on screen, visible on printer) */}
+      <div className="hidden print:block text-black p-4 bg-white" style={{ width: '80mm', margin: '0 auto', fontFamily: 'monospace' }}>
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold">{biz?.name}</h1>
+          <div className="text-sm mt-1">Welcome!</div>
+        </div>
+        
+        <div className="text-sm mb-4">
+          <div>Service:</div>
+          <div className="font-bold text-lg">{printData?.serviceName}</div>
+        </div>
+        
+        <div className="text-center mb-6 border-y-2 border-black border-dashed py-4">
+          <div className="text-5xl font-bold mb-2">{printData?.tokenNumber}</div>
+        </div>
+        
+        <div className="text-sm mb-6 text-center">
+          <div>People ahead: {printData?.waiting}</div>
+          <div>{printData?.date}</div>
+        </div>
+        
+        <div className="text-center text-sm">
+          Please wait for your number<br/>to be called.
+        </div>
+      </div>
+
       {/* Header */}
-      <header className="p-10 flex flex-col items-center justify-center relative z-10">
+      <header className="p-10 flex flex-col items-center justify-center relative z-10 print:hidden">
         {biz?.customLogoUrl ? (
           <img src={biz.customLogoUrl} alt={biz.name} className="h-16 max-w-[300px] object-contain mb-4" />
         ) : (
@@ -153,7 +189,7 @@ function KioskContent() {
       </header>
 
       {/* Services Grid */}
-      <main className="flex-1 p-10 overflow-y-auto relative z-10 flex flex-col items-center justify-center gap-6">
+      <main className="flex-1 p-10 overflow-y-auto relative z-10 flex flex-col items-center justify-center gap-6 print:hidden">
         {printError && (
           <div className="bg-red-100 border-2 border-red-500 text-red-700 px-6 py-4 rounded-xl font-bold mb-4 animate-bounce">
             ⚠️ {printError}
